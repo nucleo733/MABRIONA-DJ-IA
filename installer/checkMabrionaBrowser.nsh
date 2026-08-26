@@ -26,12 +26,21 @@
   ;    porque esta URL real encadena dos redirects antes del archivo:
   ;    mabriona.com → GitHub Releases → CDN de GitHub. electron-builder
   ;    ya empaqueta `inetc` de fábrica para su propio NSIS.
+  ; `/SILENT` apaga la ventana propia de progreso de `inetc` — sin esto,
+  ; una instalación silenciosa (`/S`, como la que usa este mismo paso en
+  ; CI para probarse a sí mismo) igual mostraría esa ventana, algo que
+  ; NSIS no suprime automáticamente por tratarse de UI de un plugin, no
+  ; de las páginas estándar del instalador.
   DetailPrint "Instalando MABRIONA Browser (navegador oficial de MABRIONA)…"
-  inetc::get "https://www.mabriona.com/browser/download/windows" "$TEMP\MABRIONA-Browser-Setup.exe"
+  inetc::get /SILENT "https://www.mabriona.com/browser/download/windows" "$TEMP\MABRIONA-Browser-Setup.exe"
   Pop $0
   StrCmp $0 "OK" browser_download_ok browser_download_failed
 
   browser_download_failed:
+    ; El MessageBox nunca debe bloquear una instalación silenciosa (`/S`)
+    ; esperando un clic que jamás va a llegar — sin este chequeo, un CI
+    ; o un instalador desatendido queda colgado para siempre acá.
+    IfSilent browser_step_done 0
     MessageBox MB_OK|MB_ICONEXCLAMATION "No se pudo descargar MABRIONA Browser automáticamente. MABRIONA DJ AI va a quedar instalado, pero necesita MABRIONA Browser para buscar música — instalalo desde mabriona.com/browser cuando puedas."
     Goto browser_step_done
 
