@@ -9,19 +9,22 @@
   "private": true,
   "scripts": {
     "start": "electron .",
+    "test": "node --test test/browserBridgeClient.test.js",
+    "test:e2e": "node test/djia-mabriona-browser-integration.mjs",
     "dist:mac": "electron-builder --mac dir",
     "dist:win": "electron-builder --win nsis",
     "dist:linux": "electron-builder --linux AppImage"
   },
   "devDependencies": {
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "playwright": "^1.61.1"
   },
   "build": {
     "appId": "com.mabriona.djia",
     "productName": "MABRIONA DJ IA",
     "icon": "build/icon.icns",
-    "files": ["main.js", "browser-window.html"],
+    "files": ["main.js", "preload.js", "browserBridgeClient.js"],
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.music",
@@ -30,6 +33,9 @@
     "win": {
       "icon": "build/icon.ico",
       "target": [{ "target": "nsis", "arch": ["x64"] }]
+    },
+    "nsis": {
+      "include": "installer/checkMabrionaBrowser.nsh"
     },
     "linux": {
       "icon": "build/icon.png",
