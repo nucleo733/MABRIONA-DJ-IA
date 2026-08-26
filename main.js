@@ -1,6 +1,6 @@
 'use strict'
 
-const { app, BrowserWindow, shell } = require('electron')
+const { app, BrowserWindow, shell, Menu } = require('electron')
 const path = require('node:path')
 
 // La app de escritorio de DJ IA es una ventana nativa que carga la
@@ -16,6 +16,38 @@ process.on('uncaughtException', (err) => {
 })
 
 let mainWindow = null
+let browserWindow = null
+
+// Panel de navegación integrado (MABRIONA Search) — para buscar y
+// encontrar música sin salir de la app. Es una ventana propia con su
+// propia barra de direcciones (browser-window.html), no una copia del
+// navegador completo MABRIONA Browser (ese es otro producto aparte).
+function openBrowserWindow() {
+  if (browserWindow) {
+    browserWindow.show()
+    browserWindow.focus()
+    return
+  }
+  browserWindow = new BrowserWindow({
+    width: 1100,
+    height: 760,
+    minWidth: 640,
+    minHeight: 480,
+    backgroundColor: '#0a0a0a',
+    title: 'Buscar música — MABRIONA',
+    parent: mainWindow ?? undefined,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false, // el <webview> del panel de búsqueda lo requiere
+      webviewTag: true,
+    },
+  })
+  browserWindow.loadFile(path.join(__dirname, 'browser-window.html'))
+  browserWindow.on('closed', () => {
+    browserWindow = null
+  })
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -48,7 +80,32 @@ function createWindow() {
   })
 }
 
-app.whenReady().then(createWindow)
+function buildMenu() {
+  const isMac = process.platform === 'darwin'
+  const template = [
+    ...(isMac ? [{ role: 'appMenu' }] : []),
+    {
+      label: 'MABRIONA',
+      submenu: [
+        {
+          label: 'Buscar música…',
+          accelerator: 'CmdOrCtrl+B',
+          click: () => openBrowserWindow(),
+        },
+        { type: 'separator' },
+        isMac ? { role: 'close' } : { role: 'quit' },
+      ],
+    },
+    { role: 'editMenu' },
+    { role: 'windowMenu' },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+app.whenReady().then(() => {
+  buildMenu()
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
