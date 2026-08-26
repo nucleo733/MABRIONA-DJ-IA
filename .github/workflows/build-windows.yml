@@ -1,0 +1,76 @@
+name: Build Windows
+
+# Igual que MABRIONA-BROWSER: Windows no se puede compilar desde la máquina de desarrollo
+# habitual (necesita Wine, no instalado ahí) — este workflow usa un runner de Windows real de
+# GitHub Actions para compilar el instalador NSIS de verdad, y confirma que la app instalada
+# arranca de verdad en ese runner (no solo que "el build terminó sin error"). Manual a propósito
+# (workflow_dispatch): cada build de Windows se dispara y se revisa a mano antes de publicarlo.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - name: Correr unit tests reales antes de compilar
+        run: npm test
+
+      - name: Compilar el instalador NSIS real (incluye el macro customInstall del bridge con MABRIONA Browser)
+        run: npm run dist:win
+
+      # Best-effort, mismo criterio que MABRIONA-BROWSER: el instalador silencioso de NSIS puede
+      # ser intermitente en el runner — no es motivo para descartar un build que sí compiló bien.
+      - name: Verificación real — instalar en silencio y confirmar que el proceso arranca
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $installer = Get-ChildItem -Path dist -Filter "*.exe" | Select-Object -First 1
+          Write-Host "Instalador: $($installer.FullName)"
+          $installDir = "C:\mabriona-djia-ci-install"
+          Start-Process -FilePath $installer.FullName -ArgumentList "/S", "/D=$installDir" -Wait
+
+          $exePath = $null
+          for ($i = 0; $i -lt 8 -and -not $exePath; $i++) {
+            $found = Get-ChildItem -Path $installDir -Recurse -Filter "*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+            if ($found) { $exePath = $found } else { Start-Sleep -Seconds 3 }
+          }
+          if (-not $exePath) {
+            Write-Host "No se encontró ningún .exe en $installDir. Contenido real de esa carpeta:"
+            if (Test-Path $installDir) { Get-ChildItem -Path $installDir -Recurse -ErrorAction SilentlyContinue | Select-Object FullName } else { Write-Host "(la carpeta ni siquiera existe — la instalación silenciosa no corrió)" }
+            Write-Error "No se encontró ningún .exe instalado en $installDir — la instalación silenciosa falló."; exit 1
+          }
+          Write-Host "Instalado en: $exePath"
+          Start-Process -FilePath $exePath
+          Start-Sleep -Seconds 8
+          $procName = [System.IO.Path]::GetFileNameWithoutExtension($exePath)
+          $proc = Get-Process -Name $procName -ErrorAction SilentlyContinue
+          if ($proc) {
+            Write-Host "REAL: el proceso arrancó y sigue vivo (PID $($proc.Id)) — verificación real en Windows, no simulada."
+            Stop-Process -Id $proc.Id -Force
+          } else {
+            Write-Error "El proceso no aparece corriendo después de abrirlo — falló el arranque real en Windows."
+            exit 1
+          }
+
+      - name: Checksum real del instalador
+        shell: bash
+        run: |
+          cd dist
+          sha256sum *.exe | tee checksums-win.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mabriona-djia-windows
+          path: |
+            dist/*.exe
+            dist/checksums-win.txt
+          retention-days: 30

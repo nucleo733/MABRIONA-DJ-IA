@@ -22,12 +22,14 @@
 
   ; 2) No está — descargar el instalador oficial real (nunca una URL
   ;    de terceros, nunca Brave/Chrome/Firefox) y ejecutarlo antes de
-  ;    continuar. NSIS trae inetc de fábrica (electron-builder ya lo
-  ;    empaqueta) para la descarga real.
+  ;    continuar. `inetc` (no `NSISdl`, que no sigue redirects HTTP)
+  ;    porque esta URL real encadena dos redirects antes del archivo:
+  ;    mabriona.com → GitHub Releases → CDN de GitHub. electron-builder
+  ;    ya empaqueta `inetc` de fábrica para su propio NSIS.
   DetailPrint "Instalando MABRIONA Browser (navegador oficial de MABRIONA)…"
-  NSISdl::download "https://mabriona.com/browser/download/windows" "$TEMP\MABRIONA-Browser-Setup.exe"
+  inetc::get "https://www.mabriona.com/browser/download/windows" "$TEMP\MABRIONA-Browser-Setup.exe"
   Pop $0
-  StrCmp $0 "success" browser_download_ok browser_download_failed
+  StrCmp $0 "OK" browser_download_ok browser_download_failed
 
   browser_download_failed:
     MessageBox MB_OK|MB_ICONEXCLAMATION "No se pudo descargar MABRIONA Browser automáticamente. MABRIONA DJ AI va a quedar instalado, pero necesita MABRIONA Browser para buscar música — instalalo desde mabriona.com/browser cuando puedas."
