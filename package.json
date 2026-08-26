@@ -12,7 +12,7 @@
     "test": "node --test test/browserBridgeClient.test.js",
     "test:e2e": "node test/djia-mabriona-browser-integration.mjs",
     "dist:mac": "electron-builder --mac dir",
-    "dist:win": "electron-builder --win nsis",
+    "dist:win": "electron-builder --win nsis --publish=never",
     "dist:linux": "electron-builder --linux AppImage"
   },
   "devDependencies": {
