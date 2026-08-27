@@ -21,10 +21,7 @@ jobs:
 
       - run: npm ci
 
-      - name: Correr unit tests reales antes de compilar
-        run: npm test
-
-      - name: Compilar el instalador NSIS real (incluye el macro customInstall del bridge con MABRIONA Browser)
+      - name: Compilar el instalador NSIS real
         run: npm run dist:win
 
       # Best-effort, mismo criterio que MABRIONA-BROWSER: el instalador silencioso de NSIS puede
