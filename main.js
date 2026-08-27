@@ -25,7 +25,7 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 700,
     backgroundColor: '#000000',
-    title: 'MABRIONA DJ IA',
+    title: 'DJ AI App',
     icon: path.join(__dirname, 'build', 'icon.icns'),
     webPreferences: {
       contextIsolation: true,
@@ -78,7 +78,7 @@ async function ensureBraveInstalledMac() {
   await dialog.showMessageBox({
     type: 'info',
     title: 'Instalando Brave',
-    message: 'MABRIONA DJ IA necesita el navegador Brave.',
+    message: 'DJ AI App necesita el navegador Brave.',
     detail: 'Se va a instalar ahora — macOS va a pedir tu contraseña de administrador.',
     buttons: ['Continuar'],
   })

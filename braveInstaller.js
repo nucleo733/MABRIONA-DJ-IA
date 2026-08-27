@@ -37,7 +37,7 @@ function downloadPkg(destPath) {
 function installPkgElevated(pkgPath) {
   return new Promise((resolve, reject) => {
     const safePath = pkgPath.replace(/(["\\$`])/g, '\\$1')
-    const script = `do shell script "installer -pkg \\"${safePath}\\" -target /" with administrator privileges with prompt "MABRIONA DJ IA necesita instalar el navegador Brave"`
+    const script = `do shell script "installer -pkg \\"${safePath}\\" -target /" with administrator privileges with prompt "DJ AI App necesita instalar el navegador Brave"`
     const osa = spawn('osascript', ['-e', script], { stdio: 'ignore' })
     osa.on('exit', (code) => {
       if (code === 0) resolve()

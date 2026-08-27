@@ -1,6 +1,6 @@
 {
   "name": "mabriona-dj-ia",
-  "productName": "MABRIONA DJ IA",
+  "productName": "DJ AI App",
   "version": "0.2.0",
   "description": "App de escritorio descargable del mezclador DJ IA de MABRIONA STUDIO — motor real (Electron) que carga el mezclador de producción en su propia ventana nativa.",
   "main": "main.js",
@@ -20,7 +20,7 @@
   },
   "build": {
     "appId": "com.mabriona.djia",
-    "productName": "MABRIONA DJ IA",
+    "productName": "DJ AI App",
     "icon": "build/icon.icns",
     "files": ["main.js", "braveInstaller.js"],
     "mac": {
