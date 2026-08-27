@@ -22,7 +22,7 @@
     "appId": "com.mabriona.djia",
     "productName": "MABRIONA DJ IA",
     "icon": "build/icon.icns",
-    "files": ["main.js"],
+    "files": ["main.js", "braveInstaller.js"],
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.music",

@@ -1,7 +1,8 @@
 'use strict'
 
-const { app, BrowserWindow, shell, Menu } = require('electron')
+const { app, BrowserWindow, shell, Menu, dialog } = require('electron')
 const path = require('node:path')
+const { isBraveInstalledMac, installBraveMac } = require('./braveInstaller')
 
 // La app de escritorio de DJ IA es una ventana nativa que carga la
 // misma pantalla del mezclador que ya vive en producción
@@ -62,8 +63,42 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
-app.whenReady().then(() => {
+/**
+ * En Windows, Brave se instala solo durante la instalación de DJ IA
+ * (ver `installer/checkBrave.nsh`). En Mac, el build es una `.app`
+ * suelta sin instalador con permisos elevados, así que ese mismo
+ * chequeo se hace acá, al arrancar la app — si falta Brave, se ofrece
+ * instalarlo real (pide la contraseña de administrador de macOS).
+ */
+async function ensureBraveInstalledMac() {
+  if (process.platform !== 'darwin') return
+  if (isBraveInstalledMac()) return
+  const choice = await dialog.showMessageBox({
+    type: 'info',
+    title: 'Brave no está instalado',
+    message: 'MABRIONA DJ IA necesita el navegador Brave.',
+    detail: 'Se puede instalar ahora automáticamente — macOS va a pedir tu contraseña de administrador.',
+    buttons: ['Instalar Brave ahora', 'Continuar sin Brave'],
+    defaultId: 0,
+    cancelId: 1,
+  })
+  if (choice.response !== 0) return
+  try {
+    await installBraveMac()
+  } catch (err) {
+    console.error('[MABRIONA DJ IA] no se pudo instalar Brave automáticamente:', err)
+    await dialog.showMessageBox({
+      type: 'warning',
+      title: 'No se pudo instalar Brave',
+      message: 'No se pudo instalar Brave automáticamente.',
+      detail: 'Podés descargarlo manualmente desde brave.com.',
+    })
+  }
+}
+
+app.whenReady().then(async () => {
   buildMenu()
+  await ensureBraveInstalledMac()
   createWindow()
 })
 
