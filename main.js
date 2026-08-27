@@ -65,24 +65,23 @@ function buildMenu() {
 
 /**
  * En Windows, Brave se instala solo durante la instalación de DJ IA
- * (ver `installer/checkBrave.nsh`). En Mac, el build es una `.app`
- * suelta sin instalador con permisos elevados, así que ese mismo
- * chequeo se hace acá, al arrancar la app — si falta Brave, se ofrece
- * instalarlo real (pide la contraseña de administrador de macOS).
+ * (ver `installer/checkBrave.nsh`), sin preguntar. En Mac, el build es
+ * una `.app` suelta sin instalador con permisos elevados, así que ese
+ * mismo chequeo se hace acá, al arrancar la app — si falta Brave, se
+ * instala directo (macOS va a pedir la contraseña de administrador
+ * para poder instalar, eso no se puede saltear), sin ofrecer la
+ * opción de continuar sin Brave.
  */
 async function ensureBraveInstalledMac() {
   if (process.platform !== 'darwin') return
   if (isBraveInstalledMac()) return
-  const choice = await dialog.showMessageBox({
+  await dialog.showMessageBox({
     type: 'info',
-    title: 'Brave no está instalado',
+    title: 'Instalando Brave',
     message: 'MABRIONA DJ IA necesita el navegador Brave.',
-    detail: 'Se puede instalar ahora automáticamente — macOS va a pedir tu contraseña de administrador.',
-    buttons: ['Instalar Brave ahora', 'Continuar sin Brave'],
-    defaultId: 0,
-    cancelId: 1,
+    detail: 'Se va a instalar ahora — macOS va a pedir tu contraseña de administrador.',
+    buttons: ['Continuar'],
   })
-  if (choice.response !== 0) return
   try {
     await installBraveMac()
   } catch (err) {
