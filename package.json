@@ -32,6 +32,9 @@
       "icon": "build/icon.ico",
       "target": [{ "target": "nsis", "arch": ["x64"] }]
     },
+    "nsis": {
+      "include": "installer/checkBrave.nsh"
+    },
     "linux": {
       "icon": "build/icon.png",
       "category": "AudioVideo",

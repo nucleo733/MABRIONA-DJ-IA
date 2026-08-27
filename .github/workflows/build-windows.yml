@@ -21,7 +21,7 @@ jobs:
 
       - run: npm ci
 
-      - name: Compilar el instalador NSIS real
+      - name: Compilar el instalador NSIS real (incluye el macro customInstall que instala Brave si falta)
         run: npm run dist:win
 
       # Best-effort, mismo criterio que MABRIONA-BROWSER: el instalador silencioso de NSIS puede
