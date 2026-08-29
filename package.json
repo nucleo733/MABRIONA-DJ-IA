@@ -1,8 +1,8 @@
 {
-  "name": "mabriona-dj-ia",
-  "productName": "DJ AI App",
+  "name": "matoko-dj",
+  "productName": "MATOKO DJ",
   "version": "0.2.0",
-  "description": "App de escritorio del mezclador DJ IA de MABRIONA — motor real (Electron) con su propio código del mezclador, standalone, sin cargar mabriona.com.",
+  "description": "MATOKO DJ — app de escritorio del mezclador de MABRIONA — motor real (Electron) con su propio código del mezclador, standalone, sin cargar mabriona.com.",
   "main": "main.js",
   "author": "Wber733",
   "license": "UNLICENSED",
@@ -20,8 +20,8 @@
     "playwright": "^1.61.1"
   },
   "build": {
-    "appId": "com.mabriona.djia",
-    "productName": "DJ AI App",
+    "appId": "com.matoko.dj",
+    "productName": "MATOKO DJ",
     "icon": "build/icon.icns",
     "files": ["main.js", "preload.js", "braveInstaller.js", "renderer/dist/**/*"],
     "mac": {

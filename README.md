@@ -1,17 +1,20 @@
-# MABRIONA DJ IA
+# MATOKO DJ
 
-App de escritorio descargable del mezclador **DJ IA** de MABRIONA STUDIO.
+App de escritorio del mezclador de MABRIONA (decks, EQ, hot cues,
+mezcla automática, biblioteca, karaoke).
 
-Es una ventana nativa (Electron) que carga directamente
-`https://mabriona.com/dj-ia-app` — la misma pantalla del mezclador que
-vive en producción, sin el header/nav del resto de MABRIONA STUDIO
-alrededor. No duplica el motor de audio ni el código del mezclador:
-siempre queda igual de actualizado que la web, porque es la web.
+Standalone real: el código del mezclador vive en `renderer/` (copia
+propia, sin depender de mabriona.com). `main.js` levanta un servidor
+HTTP local que sirve ese build y lo carga en la ventana — no abre la
+web de MABRIONA Studio. La única llamada de red que sigue yendo contra
+`mabriona.com` es la búsqueda/verificación de YouTube (`/api/search`,
+`/api/check`), porque ahí viven las claves secretas de esas APIs.
 
 ## Desarrollo
 
 ```bash
 npm install
+cd renderer && npm install && cd ..
 npm start
 ```
 

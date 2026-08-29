@@ -6,9 +6,9 @@ const http = require('node:http')
 const fs = require('node:fs')
 const { isBraveInstalledMac, installBraveMac } = require('./braveInstaller')
 
-// La app de escritorio de DJ IA tiene su propio código del mezclador
-// (renderer/, copia standalone del componente que también vive en
-// mabriona.com) — no carga la web de MABRIONA Studio. Solo dos
+// MATOKO DJ tiene su propio código del mezclador (renderer/, copia
+// standalone del componente que también vive en mabriona.com) — no
+// carga la web de MABRIONA Studio. Solo dos
 // llamadas puntuales (búsqueda/verificación de YouTube) siguen yendo
 // contra mabriona.com, porque ahí viven las claves secretas
 // (Brave/YouTube Data API) que nunca deben embeberse en un binario
@@ -28,7 +28,7 @@ const MIME_TYPES = {
 }
 
 process.on('uncaughtException', (err) => {
-  console.error('[MABRIONA DJ IA] error no manejado:', err)
+  console.error('[MATOKO DJ] error no manejado:', err)
 })
 
 let mainWindow = null
@@ -87,7 +87,7 @@ ipcMain.handle('djia:search', async (_evt, { query, safe }) => {
   try {
     return await callMabrionaApi(`/api/search?q=${encodeURIComponent(query)}${safe ? '&safe=1' : ''}`)
   } catch (err) {
-    console.error('[MABRIONA DJ IA] error buscando en YouTube:', err)
+    console.error('[MATOKO DJ] error buscando en YouTube:', err)
     return { ok: false, status: 0, data: null }
   }
 })
@@ -96,7 +96,7 @@ ipcMain.handle('djia:check', async (_evt, { id }) => {
   try {
     return await callMabrionaApi(`/api/check?id=${encodeURIComponent(id)}`)
   } catch (err) {
-    console.error('[MABRIONA DJ IA] error verificando video de YouTube:', err)
+    console.error('[MATOKO DJ] error verificando video de YouTube:', err)
     return { ok: false, status: 0, data: null }
   }
 })
@@ -113,7 +113,7 @@ async function createWindow() {
     minWidth: 1100,
     minHeight: 700,
     backgroundColor: '#000000',
-    title: 'DJ AI App',
+    title: 'MATOKO DJ',
     icon: path.join(__dirname, 'build', 'icon.icns'),
     webPreferences: {
       contextIsolation: true,
@@ -143,7 +143,7 @@ function buildMenu() {
   const template = [
     ...(isMac ? [{ role: 'appMenu' }] : []),
     {
-      label: 'MABRIONA',
+      label: 'MATOKO DJ',
       submenu: [isMac ? { role: 'close' } : { role: 'quit' }],
     },
     { role: 'editMenu' },
@@ -153,7 +153,7 @@ function buildMenu() {
 }
 
 /**
- * En Windows, Brave se instala solo durante la instalación de DJ IA
+ * En Windows, Brave se instala solo durante la instalación de MATOKO DJ
  * (ver `installer/checkBrave.nsh`), sin preguntar. En Mac, el build es
  * una `.app` suelta sin instalador con permisos elevados, así que ese
  * mismo chequeo se hace acá, al arrancar la app — si falta Brave, se
@@ -167,14 +167,14 @@ async function ensureBraveInstalledMac() {
   await dialog.showMessageBox({
     type: 'info',
     title: 'Instalando Brave',
-    message: 'DJ AI App necesita el navegador Brave.',
+    message: 'MATOKO DJ necesita el navegador Brave.',
     detail: 'Se va a instalar ahora — macOS va a pedir tu contraseña de administrador.',
     buttons: ['Continuar'],
   })
   try {
     await installBraveMac()
   } catch (err) {
-    console.error('[MABRIONA DJ IA] no se pudo instalar Brave automáticamente:', err)
+    console.error('[MATOKO DJ] no se pudo instalar Brave automáticamente:', err)
     await dialog.showMessageBox({
       type: 'warning',
       title: 'No se pudo instalar Brave',
