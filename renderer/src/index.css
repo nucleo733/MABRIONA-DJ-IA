@@ -1,0 +1,352 @@
+@import "tailwindcss";
+
+/*
+  MABRIONA STUDIO — Design tokens
+  Fuente exclusiva: AI_DESIGN_SYSTEM.md §1 (Fundamentos).
+  Los valores hex son la primera resolución concreta de los nombres de color
+  aproximados del Design System (§1.1) — no contradicen la asignación de rol,
+  solo le dan un valor renderizable.
+*/
+@theme {
+  /* Breakpoints — Constitución §19/20, Home Master §21: Mobile <768,
+     Tablet 768–1199, Desktop ≥1200. Se redefine "lg" (1024px por defecto
+     en Tailwind) a 1200px exactos para que coincida con el umbral de
+     Desktop documentado — todas las clases `lg:` ya escritas en los
+     componentes pasan a activarse en el punto correcto sin tocarlas. */
+  --breakpoint-lg: 75rem; /* 1200px */
+
+  /* Color — Design System §1.1 */
+  --color-bg-base: #04090c;
+  --color-brand-green: #22e0a0;
+  --color-accent-music: #14b8a6;
+  --color-accent-videos: #38bdf8;
+  --color-accent-photos: #fbbf24;
+  --color-accent-chat: #3b82f6;
+  --color-accent-djlive: #ec4899;
+  --color-accent-store: #a855f7;
+  --color-accent-profile: #cbd5e1;
+  --color-neutral-text: #e5e7eb;
+  --color-neutral-muted: #93a0b4;
+  --color-alert: #ef4444;
+
+  /* Volt — acento único de MABRIONA STUDIO (2026-07-31). El usuario
+     aprobó una referencia visual nueva (plantilla tipo VELORA: negro
+     absoluto + neón amarillo-verde + bloques sólidos de acento con
+     texto negro encima) y autorizó explícitamente aplicarla también
+     sobre la pantalla oficial congelada, que hasta ahora era
+     monocromática pura. Reemplaza al blanco como color de "encendido"
+     (glow, hover, foco, estado activo) en todo el sistema Studio.
+     `volt` es el neón puro; `volt-soft` la variante apagada para
+     texto secundario sobre negro. */
+  --color-volt: #d4ff00;
+  --color-volt-soft: #a8cc00;
+
+  /* Cielo — acento propio de CIELO (antes Red Social). Reemplazado el
+     2026-08-27 (pedido explícito de la Dirección, con imagen de
+     referencia): el verde lima quedó descartado a favor de una
+     identidad azul/cian/violeta, tomando como ancla el gradiente que
+     ya usaba el wordmark (`CieloMark.tsx`: #8fe3ff → #4f6df0 →
+     #a855f7), para que el acento de toda la interfaz sea coherente
+     con el logo. Sigue siendo un token propio y separado de `volt`
+     (resto de MABRIONA STUDIO, intacto). Superficies en estilo
+     "vidrio" (glassmorphism): paneles translúcidos con `backdrop-blur`
+     + tinte de este color en vez de negro sólido — acotado a
+     `components/studio/social/`. */
+  --color-cielo: #5b7cfa;
+  --color-cielo-soft: #8fe3ff;
+
+  /* Espaciado — escala modular de 8pt, Design System §1.3 */
+  --spacing-xxs: 0.125rem; /* 2px */
+  --spacing-xs: 0.25rem;   /* 4px */
+  --spacing-s: 0.5rem;     /* 8px */
+  --spacing-m: 1rem;       /* 16px */
+  --spacing-l: 1.5rem;     /* 24px */
+  --spacing-xl: 2rem;      /* 32px */
+  --spacing-xxl: 3rem;     /* 48px */
+
+  /* Radios — Design System §1.5 */
+  --radius-s: 0.5rem;  /* 8px */
+  --radius-m: 1rem;    /* 16px */
+  --radius-l: 1.5rem;  /* 24px */
+
+  /* Tipografía — familia provisional, pendiente de confirmación final
+     (Design System §1.2 / §16: candidatas Inter, Manrope, General Sans,
+     Space Grotesk). Se usa un stack de sistema sans geométrico como
+     placeholder para no depender de una fuente remota. */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Curvas de animación — Motion System §1.9 */
+  --ease-out-ai: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-ai: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-in-ai: cubic-bezier(0.55, 0, 1, 0.45);
+}
+
+html,
+#root {
+  height: 100%;
+}
+
+html {
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html::-webkit-scrollbar {
+  display: none;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--color-bg-base);
+  color: var(--color-neutral-text);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+body::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Bandas de paneles con scroll interno (Home Master §5) — el scroll
+   sigue funcionando con mouse/touch, sin barra visible (mismo criterio
+   que html/body). */
+.ai-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ai-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+  Señal de "hay más contenido" — hallazgo de certificación Fase 13: ningún
+  contenedor con scroll interno tenía pista visual de que había más
+  contenido fuera de vista. Degradado de máscara, no una barra de scroll
+  extra ni un componente nuevo — puramente CSS.
+*/
+.ai-fade-v {
+  mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+}
+.ai-fade-h {
+  mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+}
+/* Variante que solo desvanece por debajo de Desktop (1200px) — evitar
+   depender de un `lg:` de Tailwind aquí: al no estar en su @layer, un
+   utility con variante nunca podría ganarle en cascada a esta clase. */
+@media (min-width: 75rem) {
+  .ai-fade-v-mobile {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+}
+@media not all and (min-width: 75rem) {
+  .ai-fade-v-mobile {
+    mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+  }
+}
+/* Inversa: solo desvanece en Desktop (≥1200px) — bandas de paneles que
+   solo scrollean de forma independiente a partir de ese breakpoint. */
+@media (min-width: 75rem) {
+  .ai-fade-v-desktop {
+    mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 28px), transparent 100%);
+  }
+}
+
+/*
+  Deriva de la nebulosa — Fase 14, hallazgo de performance real (medido
+  con Chrome Tracing + prueba A/B, no supuesto): las 14 superficies de
+  cristal del Home (Topbar, Sidebar, Player, 6 paneles, 8 nodos) usan
+  `backdrop-filter`, que debe re-muestrear su fondo cada vez que algo
+  detrás cambia. La nebulosa animando con interpolación continua (~60
+  actualizaciones/seg vía Framer Motion) forzaba ese re-muestreo 60
+  veces por segundo en las 14 superficies a la vez (RasterTask ocupaba
+  ~80% del presupuesto de frame). El desplazamiento es "lentísimo" por
+  especificación (Motion System §13) — a esa velocidad, avanzar en 10
+  pasos discretos por ciclo en vez de continuo es imperceptible al ojo,
+  pero reduce el re-muestreo de fondo en ~6x. Mismo recorrido, misma
+  duración, mismo resultado visual — solo cambia la frecuencia interna
+  de actualización.
+*/
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes nebula-drift-a {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(30px, -20px); }
+  60% { transform: translate(-20px, 25px); }
+}
+.ai-nebula-blob {
+  animation-name: nebula-drift-a;
+  animation-timing-function: steps(10, jump-end);
+  animation-iteration-count: infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-nebula-blob {
+    animation: none;
+  }
+}
+
+/*
+  Fase 15 — Bloqueante 1, segunda causa real (medida con rigor, 5
+  muestras por condición sobre build de producción, no una sola
+  corrida): el Orbital (anillos + líneas + partículas, todos animados
+  vía interpolación continua de Framer Motion) pesa MÁS que la
+  nebulosa — quitarlo solo destraba +16.8fps, contra +1.4fps de la
+  nebulosa. Mismo fix que ya funcionó ahí: animación CSS por pasos en
+  vez de interpolación continua. El "energizado" (hover/foco) sigue
+  funcionando: apaga la animación (`animation:none` vía Tailwind
+  arbitrary property en el componente) y dispara un valor estático
+  inmediato, sin pelear con el frame que Framer... con CSS puro esto ya
+  no aplica variables encadenadas, así que no hereda el bug de Fase 14.
+*/
+@keyframes orbital-ring-cw {
+  to { transform: rotate(360deg); }
+}
+@keyframes orbital-ring-ccw {
+  to { transform: rotate(-360deg); }
+}
+.ai-orbital-ring {
+  animation-timing-function: steps(60, end);
+  animation-iteration-count: infinite;
+}
+@keyframes orbital-line-breathe {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.8; }
+}
+.ai-orbital-line {
+  animation-name: orbital-line-breathe;
+  animation-duration: 4s;
+  animation-timing-function: steps(8, jump-end);
+  animation-iteration-count: infinite;
+}
+@keyframes orbital-particle-travel {
+  0% { transform: translate(var(--ai-px), var(--ai-py)); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translate(var(--ai-qx), var(--ai-qy)); opacity: 0; }
+}
+.ai-orbital-particle {
+  animation-name: orbital-particle-travel;
+  animation-duration: 3s;
+  animation-timing-function: steps(14, jump-end);
+  animation-iteration-count: infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ai-orbital-ring,
+  .ai-orbital-line,
+  .ai-orbital-particle {
+    animation: none;
+  }
+}
+
+/* Shimmer de estado "loading" — Design System §1.10, Motion System §33 */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* DJ IA — brillo diagonal de la pantalla de video, mismo efecto "vidrio real" de la referencia aprobada */
+@keyframes dj-glass-sheen {
+  0%,
+  100% {
+    transform: translateX(0) rotate(14deg);
+  }
+  50% {
+    transform: translateX(220%) rotate(14deg);
+  }
+}
+
+/* DJ IA — transiciones de video reales entre Plato 1 y Plato 2 (transforman los elementos de verdad, no un efecto falso): el que se va anima "-out", el que entra anima "-in", corren juntos al cambiar de foco. */
+@keyframes dj-video-fade-out { from { opacity: 1; } to { opacity: 0; } }
+@keyframes dj-video-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes dj-video-cube-out { from { transform: perspective(1200px) rotateY(0deg) scale(1); opacity: 1; } to { transform: perspective(1200px) rotateY(-90deg) scale(0.85); opacity: 0; } }
+@keyframes dj-video-cube-in { from { transform: perspective(1200px) rotateY(90deg) scale(0.85); opacity: 0; } to { transform: perspective(1200px) rotateY(0deg) scale(1); opacity: 1; } }
+
+@keyframes dj-video-slide-out { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-100%); opacity: 0.4; } }
+@keyframes dj-video-slide-in { from { transform: translateX(100%); opacity: 0.4; } to { transform: translateX(0); opacity: 1; } }
+
+@keyframes dj-video-flip-out { from { transform: perspective(1200px) rotateX(0deg); opacity: 1; } to { transform: perspective(1200px) rotateX(90deg); opacity: 0; } }
+@keyframes dj-video-flip-in { from { transform: perspective(1200px) rotateX(-90deg); opacity: 0; } to { transform: perspective(1200px) rotateX(0deg); opacity: 1; } }
+
+@keyframes dj-video-zoom-out { from { transform: scale(1); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
+@keyframes dj-video-zoom-in { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+@keyframes dj-video-glass-out { from { filter: blur(0px); opacity: 1; } to { filter: blur(18px); opacity: 0; } }
+@keyframes dj-video-glass-in { from { filter: blur(18px); opacity: 0; } to { filter: blur(0px); opacity: 1; } }
+
+/* DJ IA — espectro/waveform y meters "vivos", como un analizador de audio real en vez de una barra estática de juego */
+@keyframes dj-spectrum-pulse {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(var(--dj-peak, 1.18));
+  }
+}
+
+/* DJ IA — efectos de luz del aro del plato (real, ligado al BPM detectado, no decorativo genérico) */
+@keyframes dj-ring-pulse {
+  0%,
+  100% {
+    filter: brightness(1) saturate(1);
+  }
+  50% {
+    filter: brightness(1.85) saturate(1.3);
+  }
+}
+@keyframes dj-ring-strobe {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.25;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dj-ring-pulse,
+  .dj-ring-strobe,
+  .dj-ring-chase {
+    animation: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dj-spectrum-bar,
+  .dj-meter-fill {
+    animation: none !important;
+  }
+}
+
+/*
+  Accesibilidad de movimiento — Constitución §21, Motion System §13/§25,
+  Orbital Core Master §27: se detiene el movimiento AMBIENTAL perpetuo
+  (rotación de anillos, shimmer de carga, pulso del badge LIVE — todos
+  basados en @keyframes CSS), pero NO las transiciones funcionales
+  (hover, focus, entrada de paneles), que están controladas por Framer
+  Motion vía `useReducedMotion()` en cada componente ambiental (ver
+  OrbitalCore.tsx y NebulaBackground.tsx) para poder congelarlas en un
+  valor estático intermedio en vez de simplemente detenerlas en seco.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  [class*='animate-[shimmer'] {
+    animation: none !important;
+  }
+}

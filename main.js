@@ -1,24 +1,112 @@
 'use strict'
 
-const { app, BrowserWindow, shell, Menu, dialog } = require('electron')
+const { app, BrowserWindow, shell, Menu, dialog, ipcMain } = require('electron')
 const path = require('node:path')
+const http = require('node:http')
+const fs = require('node:fs')
 const { isBraveInstalledMac, installBraveMac } = require('./braveInstaller')
 
-// La app de escritorio de DJ IA es una ventana nativa que carga la
-// misma pantalla del mezclador que ya vive en producción
-// (mabriona.com/dj-ia-app, una página standalone sin el header/nav de
-// MABRIONA STUDIO). No duplica el motor de audio ni el código del
-// mezclador — así queda siempre igual de actualizado que la web, sin
-// mantener dos copias del mismo código.
-const DJ_IA_URL = 'https://mabriona.com/dj-ia-app'
+// La app de escritorio de DJ IA tiene su propio código del mezclador
+// (renderer/, copia standalone del componente que también vive en
+// mabriona.com) — no carga la web de MABRIONA Studio. Solo dos
+// llamadas puntuales (búsqueda/verificación de YouTube) siguen yendo
+// contra mabriona.com, porque ahí viven las claves secretas
+// (Brave/YouTube Data API) que nunca deben embeberse en un binario
+// público. Ver `ipcMain.handle('djia:search'|'djia:check', ...)`.
+const MABRIONA_API_BASE = 'https://mabriona.com'
+
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.wasm': 'application/wasm',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.woff2': 'font/woff2',
+  '.ico': 'image/x-icon',
+}
 
 process.on('uncaughtException', (err) => {
   console.error('[MABRIONA DJ IA] error no manejado:', err)
 })
 
 let mainWindow = null
+let rendererServer = null
 
-function createWindow() {
+function rendererRoot() {
+  return path.join(app.getAppPath(), 'renderer', 'dist')
+}
+
+/**
+ * Servidor HTTP local mínimo para servir el build del mezclador. Hace
+ * falta un origen http(s) real (no `file://`) para que la YouTube
+ * IFrame Player API funcione (usa `postMessage` entre orígenes).
+ */
+function startRendererServer() {
+  const root = rendererRoot()
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const reqPath = decodeURIComponent((req.url || '/').split('?')[0])
+      const filePath = path.join(root, reqPath === '/' ? 'index.html' : reqPath)
+      if (!filePath.startsWith(root)) {
+        res.writeHead(403).end()
+        return
+      }
+      fs.readFile(filePath, (err, data) => {
+        if (err) {
+          fs.readFile(path.join(root, 'index.html'), (err2, html) => {
+            if (err2) {
+              res.writeHead(404).end('Not found')
+              return
+            }
+            res.writeHead(200, { 'Content-Type': 'text/html' }).end(html)
+          })
+          return
+        }
+        res.writeHead(200, { 'Content-Type': MIME_TYPES[path.extname(filePath)] || 'application/octet-stream' }).end(data)
+      })
+    })
+    server.on('error', reject)
+    server.listen(0, '127.0.0.1', () => resolve(server))
+  })
+}
+
+async function callMabrionaApi(pathAndQuery) {
+  const res = await fetch(`${MABRIONA_API_BASE}${pathAndQuery}`)
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    // respuesta vacía o no-JSON — se devuelve `data: null` tal cual
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+ipcMain.handle('djia:search', async (_evt, { query, safe }) => {
+  try {
+    return await callMabrionaApi(`/api/search?q=${encodeURIComponent(query)}${safe ? '&safe=1' : ''}`)
+  } catch (err) {
+    console.error('[MABRIONA DJ IA] error buscando en YouTube:', err)
+    return { ok: false, status: 0, data: null }
+  }
+})
+
+ipcMain.handle('djia:check', async (_evt, { id }) => {
+  try {
+    return await callMabrionaApi(`/api/check?id=${encodeURIComponent(id)}`)
+  } catch (err) {
+    console.error('[MABRIONA DJ IA] error verificando video de YouTube:', err)
+    return { ok: false, status: 0, data: null }
+  }
+})
+
+async function createWindow() {
+  if (!rendererServer) {
+    rendererServer = await startRendererServer()
+  }
+  const port = rendererServer.address().port
+
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -31,10 +119,11 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   })
 
-  mainWindow.loadURL(DJ_IA_URL)
+  mainWindow.loadURL(`http://127.0.0.1:${port}`)
 
   // Cualquier link que se quiera abrir en una pestaña nueva (ej. algo
   // externo) se manda al navegador del sistema en vez de abrir una
@@ -107,4 +196,8 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
+})
+
+app.on('before-quit', () => {
+  rendererServer?.close()
 })
