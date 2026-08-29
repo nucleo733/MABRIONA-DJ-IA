@@ -1,7 +1,7 @@
 {
   "name": "matoko-dj",
   "productName": "MATOKO DJ",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "MATOKO DJ — app de escritorio del mezclador de MABRIONA — motor real (Electron) con su propio código del mezclador, standalone, sin cargar mabriona.com.",
   "main": "main.js",
   "author": "Wber733",
