@@ -701,7 +701,7 @@ function MenuView({
           <button type="button" onClick={onClearHistory} className="rounded-lg px-3 py-2 text-[10px] font-bold text-red-300" style={RAISED_BTN}>Vaciar Historial</button>
         </div>
       </div>
-      <div className="mt-1 text-[9px] text-white/25">MABRIONA DJ IA — motor Web Audio real, versión de desarrollo</div>
+      <div className="mt-1 text-[9px] text-white/25">MATOKO — motor Web Audio real, versión de desarrollo</div>
     </div>
   )
 }
@@ -1059,16 +1059,16 @@ function HelpView() {
     { title: 'Cargar una canción', body: 'Botón "Agregar ▼" arriba a la derecha del video: elegí Biblioteca (un archivo de tu computadora) o Buscar en YouTube, y decidí a qué plato va.' },
     { title: 'Mezclar dos canciones a mano', body: 'Con una canción en cada plato, movés el Crossfader (la barra A...B del centro) para pasar de una a la otra vos mismo.' },
     { title: 'Mezcla Automática', body: 'Pestaña MEZCLA: subí 2 o más canciones de tu computadora y tocá ▶ Iniciar — se van mezclando solas, sin que hagas nada más.' },
-    { title: 'Asistente DJ IA', body: 'Botón "○ Activar DJ IA" arriba de los platos: prende Modo energía (qué tan movida es la mezcla), Modo negocio (música limpia) y Volumen automático.' },
+    { title: 'Asistente MATOKO', body: 'Botón "○ Activar MATOKO" arriba de los platos: prende Modo energía (qué tan movida es la mezcla), Modo negocio (música limpia) y Volumen automático.' },
     { title: 'Historial', body: 'Pestaña HISTORIAL: lista de todo lo que sonó de verdad, con la hora — se llena sola.' },
     { title: 'Biblioteca', body: 'Pestaña BIBLIOTECA: cada video de YouTube que agregás a un plato o a la lista queda guardado ahí solo (título, artista, miniatura, duración) — nunca el video en sí. Podés buscar, marcar favoritos, armar playlists y cargar cualquiera de nuevo con un botón.' },
     { title: 'Música Local', body: 'Pestaña MÚSICA LOCAL: importá archivos de audio de a uno, en lote, o una carpeta entera desde tu computadora — quedan guardados en tu biblioteca (no se suben a ningún lado). Duración, BPM y forma de onda son reales (mismo análisis que usan los platos). Key, energía y compatibilidad todavía no existen — "Listo" significa solo que BPM/forma de onda están disponibles.' },
     { title: 'Lista y Transmisión en vivo', body: 'Arriba a la derecha de esa misma barra: "🎵 Lista" te lleva directo a la lista de canciones agregadas sin buscarla, y "🔴 Transmisión en vivo" solo marca la sesión como en vivo dentro de la app (para vos y para las métricas) — no transmite audio ni video a ningún lado, no es un streaming real.' },
-    { title: 'Anuncios de YouTube', body: 'Los videos de YouTube en Plato 1/Plato 2 se reproducen con el reproductor oficial de YouTube — si YouTube decide mostrar un anuncio en un video, va a aparecer igual que en youtube.com. No existe ninguna forma oficial de quitarlo desde una app externa como MABRIONA.' },
+    { title: 'Anuncios de YouTube', body: 'Los videos de YouTube en Plato 1/Plato 2 se reproducen con el reproductor oficial de YouTube — si YouTube decide mostrar un anuncio en un video, va a aparecer igual que en youtube.com. No existe ninguna forma oficial de quitarlo desde una app externa como MATOKO.' },
   ]
   return (
     <div className="absolute inset-0 flex flex-col gap-2.5 overflow-y-auto p-4 text-left">
-      <span className="text-[10px] font-bold tracking-[0.12em] text-white/50">AYUDA — CÓMO USAR DJ IA</span>
+      <span className="text-[10px] font-bold tracking-[0.12em] text-white/50">AYUDA — CÓMO USAR MATOKO</span>
       <div className="flex flex-wrap gap-2.5">
         {items.map((it) => (
           <div key={it.title} className="w-72 max-w-full rounded-lg px-3 py-3.5" style={RAISED_BTN}>
@@ -3007,7 +3007,7 @@ export function DjIaScreen() {
                 className="rounded-full px-3.5 py-2 text-[11px] font-bold"
                 style={djiaActive ? raisedActive(DECK_A) : RAISED_BTN}
               >
-                {djiaActive ? '● DJ IA activado' : '○ Activar DJ IA'}
+                {djiaActive ? '● MATOKO activado' : '○ Activar MATOKO'}
               </button>
 
               {djiaActive && (
