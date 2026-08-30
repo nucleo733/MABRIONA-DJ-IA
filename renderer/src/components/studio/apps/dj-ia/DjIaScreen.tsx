@@ -868,6 +868,7 @@ function AutoMixView({
 // más asociados a cada uno para armar una mezcla reconocible.
 interface CountryGenres { country: string; flag: string; genres: string[] }
 const COUNTRY_GENRES: CountryGenres[] = [
+  { country: 'Estados Unidos', flag: '🇺🇸', genres: ['hip hop', 'r&b', 'pop', 'reggaetón latino usa'] },
   { country: 'República Dominicana', flag: '🇩🇴', genres: ['bachata', 'merengue', 'salsa', 'dembow', 'música típica'] },
   { country: 'México', flag: '🇲🇽', genres: ['banda', 'mariachi', 'corridos tumbados', 'cumbia', 'reggaetón mexicano'] },
   { country: 'Colombia', flag: '🇨🇴', genres: ['vallenato', 'salsa', 'reggaetón', 'champeta', 'cumbia colombiana'] },
@@ -879,7 +880,20 @@ const COUNTRY_GENRES: CountryGenres[] = [
   { country: 'Brasil', flag: '🇧🇷', genres: ['funk brasileño', 'sertanejo', 'pagode', 'samba'] },
   { country: 'Panamá', flag: '🇵🇦', genres: ['reggaetón panameño', 'plena panameña', 'salsa'] },
   { country: 'Perú', flag: '🇵🇪', genres: ['cumbia peruana', 'salsa peruana', 'huayno'] },
-  { country: 'Estados Unidos', flag: '🇺🇸', genres: ['hip hop', 'r&b', 'pop', 'reggaetón latino usa'] },
+  // Europa
+  { country: 'Francia', flag: '🇫🇷', genres: ['rap français', 'chanson française', 'electro française', 'pop français'] },
+  { country: 'Italia', flag: '🇮🇹', genres: ['pop italiano', 'trap italiano', 'musica napoletana', 'italo disco'] },
+  { country: 'Reino Unido', flag: '🇬🇧', genres: ['UK garage', 'grime', 'drum and bass', 'britpop'] },
+  { country: 'Alemania', flag: '🇩🇪', genres: ['german rap', 'techno alemán', 'schlager', 'eurodance'] },
+  { country: 'Portugal', flag: '🇵🇹', genres: ['fado', 'kizomba', 'pop português', 'hip hop português'] },
+  { country: 'Grecia', flag: '🇬🇷', genres: ['laiko', 'rebetiko', 'pop griego', 'trap griego'] },
+  // Asia
+  { country: 'Corea del Sur', flag: '🇰🇷', genres: ['k-pop', 'k-hip hop', 'k-r&b', 'trot'] },
+  { country: 'Japón', flag: '🇯🇵', genres: ['j-pop', 'j-rock', 'city pop', 'anime song'] },
+  { country: 'India', flag: '🇮🇳', genres: ['bollywood', 'bhangra', 'punjabi pop', 'indian pop'] },
+  { country: 'Filipinas', flag: '🇵🇭', genres: ['OPM', 'filipino pop', 'filipino hip hop'] },
+  { country: 'China', flag: '🇨🇳', genres: ['mandopop', 'c-pop', 'chinese hip hop'] },
+  { country: 'Tailandia', flag: '🇹🇭', genres: ['thai pop', 'luk thung', 'thai hip hop'] },
 ]
 
 interface GenreMixRow { genre: string; count: number }
