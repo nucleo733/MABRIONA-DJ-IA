@@ -84,7 +84,17 @@ async function run(job) {
       segData[SEGMENT_SAMPLES + n] = srcIdx < length ? in1[srcIdx] : 0
     }
 
-    const session = await ort.InferenceSession.create(modelPath, SESSION_OPTS)
+    let session
+    try {
+      session = await ort.InferenceSession.create(modelPath, SESSION_OPTS)
+    } catch (err) {
+      // El modelo descargado quedó corrupto (wifi cortada a mitad de
+      // la descarga, etc.) — se borra acá mismo para que el próximo
+      // intento lo baje de nuevo solo, en vez de fallar para siempre
+      // con el mismo error críptico de protobuf.
+      require('node:fs').rmSync(modelPath, { force: true })
+      throw new Error(`DJIA_STEMS_MODEL_CORRUPTO: el modelo de IA estaba dañado, se borró — probá separar de nuevo (${String(err && err.message || err)})`)
+    }
     const inputTensor = new ort.Tensor('float32', segData, [1, 2, SEGMENT_SAMPLES])
     const feeds = {}
     feeds[session.inputNames[0]] = inputTensor

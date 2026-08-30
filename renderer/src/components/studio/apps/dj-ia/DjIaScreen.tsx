@@ -1489,7 +1489,7 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
     fn()
   }, [hasTrack, showHint])
   const handleSeparateStems = useCallback(() => {
-    if (!engine.getLoadedFile()) { showHint('Cargá un archivo de audio primero (no funciona sobre YouTube ni Música de MABRIONA)'); return }
+    if (!engine.trackName) { showHint('Cargá una pista primero (con LOAD o desde la Biblioteca — no funciona sobre YouTube)'); return }
     void engine.separateStemsNow()
   }, [engine, showHint])
   const pitch = (
@@ -1616,6 +1616,11 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
                 : 'Preparando…')
               : 'TOCÁ ACÁ PARA SEPARAR'}
           </button>
+        )}
+        {engine.stemError && (
+          <div className="mt-1.5 rounded-md px-2 py-1 text-[8.5px] font-semibold text-red-300" style={{ background: 'rgba(239,68,68,0.12)' }}>
+            No se pudo separar: {engine.stemError}
+          </div>
         )}
       {engine.stemsReady && (
         <div className="grid w-full grid-cols-5 gap-2">
@@ -2105,7 +2110,7 @@ function useYoutubeDeckEngine(title: string, yt: {
     // archivo de audio local) — `getLoadedFile` ya devuelve `null`
     // arriba, así que el botón "STEMS" muestra el mismo aviso que
     // "Cargá un archivo de audio primero" en vez de intentar nada.
-    stemsReady: false, isSeparatingStems: false, stemProgress: null,
+    stemsReady: false, isSeparatingStems: false, stemProgress: null, stemError: null,
     stemMuted: { voz: false, bateria: false, bajo: false, resto: false } as Record<'voz' | 'bateria' | 'bajo' | 'resto', boolean>,
     separateStemsNow: async () => {}, setStemMute: (_stem: 'voz' | 'bateria' | 'bajo' | 'resto', _mutedVal: boolean) => {},
   }

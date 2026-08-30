@@ -55,7 +55,16 @@ async function ensureModelDownloaded(userDataPath, onProgress) {
     }
   })
   await pipeline(source, fs.createWriteStream(tmp))
-  onProgress?.(1)
+  // Chequeo real de integridad — sin esto, una descarga cortada a
+  // mitad de camino (wifi que se corta, etc.) quedaba guardada como
+  // si estuviera completa, y el modelo fallaba después con un error
+  // de "Protobuf parsing failed" bien críptico, sin poder recuperarse
+  // solo (el archivo ya existía, así que nunca se volvía a intentar).
+  const finalSize = (await fsp.stat(tmp)).size
+  if (total > 0 && finalSize !== total) {
+    await fsp.unlink(tmp).catch(() => undefined)
+    throw new Error(`DJIA_STEMS_MODEL_DOWNLOAD_INCOMPLETE: se bajaron ${finalSize} de ${total} bytes — probá de nuevo`)
+  }
   await fsp.rename(tmp, dest)
   return dest
 }

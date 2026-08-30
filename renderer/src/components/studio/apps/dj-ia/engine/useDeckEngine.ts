@@ -509,6 +509,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
   const [stemsReady, setStemsReady] = useState(false)
   const [isSeparatingStems, setIsSeparatingStems] = useState(false)
   const [stemProgress, setStemProgress] = useState<{ phase: string; ratio: number } | null>(null)
+  const [stemError, setStemError] = useState<string | null>(null)
   const [stemMuted, setStemMuted] = useState<Record<StemName, boolean>>({ voz: false, bateria: false, bajo: false, resto: false })
   const startedAtRef = useRef(0)
   const offsetRef = useRef(0)
@@ -812,6 +813,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     stemBuffersRef.current = null
     setStemsReady(false)
     setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
+    setStemError(null)
     lastFileRef.current = file
     const fileIsVideo = file.type.startsWith('video/')
     setIsVideoTrack(fileIsVideo)
@@ -841,6 +843,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     stemBuffersRef.current = null
     setStemsReady(false)
     setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
+    setStemError(null)
     lastFileRef.current = null
     applyBuffer(track.buffer, track.name, track.bpm)
   }, [stopSource, applyBuffer])
@@ -866,6 +869,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     stemBuffersRef.current = null
     setStemsReady(false)
     setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
+    setStemError(null)
   }, [stopSource])
 
   const seekTo = useCallback((seconds: number) => {
@@ -1328,12 +1332,18 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
   const getLoadedFile = useCallback(() => lastFileRef.current, [])
 
   const separateStemsNow = useCallback(async () => {
-    const file = lastFileRef.current
-    if (!file || isSeparatingStems) return
+    // Usa el `AudioBuffer` ya decodificado del plato, no el `File`
+    // original — así funciona sin importar de dónde vino la pista
+    // (LOAD directo, Biblioteca, Auto DJ…). Antes exigía el `File`
+    // (`getLoadedFile()`), que para pistas de la Biblioteca es
+    // siempre `null` — el botón no reaccionaba y no avisaba por qué.
+    const buffer = bufferRef.current
+    if (!buffer || isSeparatingStems) return
     setIsSeparatingStems(true)
     setStemProgress(null)
+    setStemError(null)
     try {
-      const stems = await runStemSeparation(file, ctx, (evt) => setStemProgress(evt))
+      const stems = await runStemSeparation(buffer, ctx, (evt) => setStemProgress(evt))
       stemBuffersRef.current = stems
       setStemsReady(true)
       setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
@@ -1343,6 +1353,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
       if (isPlaying) { stopSource(true); startSource(offsetRef.current) }
     } catch (err) {
       console.error('[DJ IA] separación de stems falló:', err)
+      setStemError(err instanceof Error ? err.message : String(err))
     } finally {
       setIsSeparatingStems(false)
       setStemProgress(null)
@@ -1366,7 +1377,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     setLoopIn, setLoopOut, exitReloop, clearLoop, setAutoLoop, loop4Beats, beatJump,
     triggerPad, releasePad, padFxDown, padFxUp, clearHotCues, togglePage,
     setSlip, setQuantize,
-    stemsReady, isSeparatingStems, stemProgress, stemMuted,
+    stemsReady, isSeparatingStems, stemProgress, stemMuted, stemError,
     separateStemsNow, setStemMute,
   }
 }
