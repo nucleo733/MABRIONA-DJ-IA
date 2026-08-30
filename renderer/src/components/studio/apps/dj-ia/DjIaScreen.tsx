@@ -1344,13 +1344,13 @@ const VIDEO_TRANSITIONS: { key: VideoTransitionType; label: string }[] = [
  * negro/gris profundo, brillo especular de vidrio, nunca metal
  * cepillado). Mismo material en toda la consola.
  */
-const METAL_PANEL: React.CSSProperties = {
+export const METAL_PANEL: React.CSSProperties = {
   background: 'radial-gradient(130% 110% at 26% -18%, rgba(255,255,255,0.1), transparent 45%), linear-gradient(165deg, #1a1c21 0%, #0d0e11 50%, #020202 100%)',
   boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.8), inset 0 0 60px rgba(255,255,255,0.02), 0 28px 56px rgba(0,0,0,0.65)',
 }
 
 /** Reflejo de vidrio real — franja especular nítida (no solo gradiente difuso) igual a como la luz real rebota en una curva de vidrio, más el difuso diagonal atrás. */
-function MetalGrain() {
+export function MetalGrain() {
   return (
     <>
       <div
@@ -1374,7 +1374,7 @@ function MetalGrain() {
  * blanco tenue (el color fuerte queda para `raisedActive`), para que
  * se lea vidrio de verdad en reposo también, no una superficie plana.
  */
-const RAISED_BTN: React.CSSProperties = {
+export const RAISED_BTN: React.CSSProperties = {
   borderLeft: '3px solid rgba(255,255,255,0.24)',
   borderTop: '1px solid rgba(255,255,255,0.08)',
   borderRight: '1px solid rgba(255,255,255,0.06)',
@@ -1392,7 +1392,7 @@ const RAISED_BTN: React.CSSProperties = {
  * a pedido explícito de la Dirección — sin exagerar el color en sí,
  * solo el brillo/resplandor real.
  */
-function raisedActive(color: string): React.CSSProperties {
+export function raisedActive(color: string): React.CSSProperties {
   return {
     borderLeft: `3px solid ${color}`,
     borderTop: '1px solid rgba(255,255,255,0.16)',

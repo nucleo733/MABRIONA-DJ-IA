@@ -1,10 +1,11 @@
 import { createContext, useContext, type ReactNode } from 'react'
 
 /**
- * Shim de auth para la app de escritorio standalone — el mezclador
- * corre siempre en modo invitado (mismo comportamiento que ya tiene
- * en mabriona.com sin cuenta logueada). No hay backend social/cuenta
- * en esta app, así que `accountId` es siempre `null`.
+ * `accountId` real del perfil de DJ logueado (`ProfileGate.tsx`) — ya
+ * no es siempre `null` como cuando esta app no tenía perfiles. El
+ * resto de `DjIaScreen.tsx` (historial/colas namespaceadas por
+ * `djiaAccountKey = auth.accountId ?? 'guest'`) no necesitó ningún
+ * cambio: empezó a aislar por DJ solo con que esto deje de ser fijo.
  */
 interface AuthState {
   accountId: string | null
@@ -12,8 +13,8 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState>({ accountId: null })
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  return <AuthContext.Provider value={{ accountId: null }}>{children}</AuthContext.Provider>
+export function AuthProvider({ accountId, children }: { accountId: string | null; children: ReactNode }) {
+  return <AuthContext.Provider value={{ accountId }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth(): AuthState {

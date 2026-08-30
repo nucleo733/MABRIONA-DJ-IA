@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import { AuthProvider } from './auth/AuthContext'
 import { DjIaScreen } from './components/studio/apps/dj-ia/DjIaScreen'
+import { ProfileGate, type DjProfile } from './components/studio/apps/dj-ia/ProfileGate'
 
 const BRAND_BAR_HEIGHT = 40
 const UPDATE_BANNER_HEIGHT = 36
@@ -75,15 +76,20 @@ const isMac = window.djia.platform === 'darwin'
 
 function App() {
   const [hasUpdateBanner, setHasUpdateBanner] = useState(false)
+  // Sesión del DJ logueado (`ProfileGate`) — `null` hasta que alguien
+  // elige su perfil y pone su PIN. No se persiste entre reinicios a
+  // propósito (es el punto de pedir el PIN cada vez que se abre la
+  // app, como una traba real).
+  const [session, setSession] = useState<DjProfile | null>(null)
   const topBarsHeight = (isMac ? BRAND_BAR_HEIGHT : 0) + (hasUpdateBanner ? UPDATE_BANNER_HEIGHT : 0)
 
   return (
-    <AuthProvider>
+    <AuthProvider accountId={session?.id ?? null}>
       <div className="flex h-screen w-full flex-col bg-black text-white">
         {isMac && <BrandBar />}
         <UpdateBanner onVisibleChange={setHasUpdateBanner} />
         <div className="min-h-0 flex-1 overflow-auto" style={topBarsHeight ? { height: `calc(100vh - ${topBarsHeight}px)` } : undefined}>
-          <DjIaScreen />
+          {session ? <DjIaScreen /> : <ProfileGate onEnter={setSession} />}
         </div>
       </div>
     </AuthProvider>

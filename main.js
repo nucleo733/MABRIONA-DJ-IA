@@ -68,8 +68,32 @@ function startRendererServer() {
         res.writeHead(200, { 'Content-Type': MIME_TYPES[path.extname(filePath)] || 'application/octet-stream' }).end(data)
       })
     })
-    server.on('error', reject)
-    server.listen(0, '127.0.0.1', () => resolve(server))
+    // Puerto FIJO (con una lista chica de respaldo), no aleatorio
+    // (`listen(0, ...)` como estaba antes) — `localStorage`/
+    // `IndexedDB` del renderer quedan atados al origen completo
+    // (`http://127.0.0.1:<puerto>`), así que un puerto distinto en
+    // cada arranque significaba un origen distinto cada vez, y
+    // cualquier cosa guardada con `localStorage` (perfiles de DJ,
+    // ajustes de mezcla, todo lo que ya usa `readLS`/`persisted`) se
+    // perdía al cerrar y reabrir la app — confirmado de verdad
+    // probando el sistema de perfiles nuevo. Con un puerto fijo, el
+    // origen es siempre el mismo y todo persiste como se espera.
+    const CANDIDATE_PORTS = [47131, 47132, 47133, 47134, 47135]
+    let attempt = 0
+    const tryListen = () => {
+      const port = CANDIDATE_PORTS[Math.min(attempt, CANDIDATE_PORTS.length - 1)]
+      server.listen(port, '127.0.0.1')
+    }
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE' && attempt < CANDIDATE_PORTS.length - 1) {
+        attempt += 1
+        tryListen()
+      } else {
+        reject(err)
+      }
+    })
+    server.once('listening', () => resolve(server))
+    tryListen()
   })
 }
 
