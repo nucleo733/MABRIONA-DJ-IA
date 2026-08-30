@@ -23,15 +23,42 @@
     "appId": "com.matoko.dj",
     "productName": "MATOKO DJ",
     "icon": "build/icon.icns",
-    "files": ["main.js", "preload.js", "braveInstaller.js", "renderer/dist/**/*"],
+    "files": [
+      "main.js",
+      "preload.js",
+      "braveInstaller.js",
+      "stemSeparation.js",
+      "stemWorker.js",
+      "renderer/dist/**/*",
+      "node_modules/onnxruntime-node/dist/**/*",
+      "node_modules/onnxruntime-node/lib/**/*",
+      "node_modules/onnxruntime-node/bin/**/*",
+      "node_modules/onnxruntime-node/package.json",
+      "node_modules/onnxruntime-common/**/*"
+    ],
     "mac": {
       "icon": "build/icon.icns",
       "category": "public.app-category.music",
-      "target": [{ "target": "dir", "arch": ["x64", "arm64"] }]
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
     },
     "win": {
       "icon": "build/icon.ico",
-      "target": [{ "target": "nsis", "arch": ["x64"] }]
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
     },
     "nsis": {
       "include": "installer/checkBrave.nsh"
@@ -39,10 +66,20 @@
     "linux": {
       "icon": "build/icon.png",
       "category": "AudioVideo",
-      "target": [{ "target": "AppImage", "arch": ["x64"] }]
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
     },
     "directories": {
       "output": "dist"
     }
+  },
+  "dependencies": {
+    "onnxruntime-node": "1.23.0"
   }
 }

@@ -5,6 +5,7 @@ const path = require('node:path')
 const http = require('node:http')
 const fs = require('node:fs')
 const { isBraveInstalledMac, installBraveMac } = require('./braveInstaller')
+const { separateStems } = require('./stemSeparation')
 
 // MATOKO DJ tiene su propio código del mezclador (renderer/, copia
 // standalone del componente que también vive en mabriona.com) — no
@@ -99,6 +100,23 @@ ipcMain.handle('djia:check', async (_evt, { id }) => {
     console.error('[MATOKO DJ] error verificando video de YouTube:', err)
     return { ok: false, status: 0, data: null }
   }
+})
+
+ipcMain.handle('djia:separateStems', async (evt, { ch0, ch1, length }) => {
+  const stems = await separateStems(
+    { userDataPath: app.getPath('userData'), ch0: new Float32Array(ch0), ch1: new Float32Array(ch1), length },
+    (progress) => evt.sender.send('djia:stemsProgress', progress),
+  )
+  // `stems[*].ch0/ch1` pueden llegar como `Buffer` real (recién separado,
+  // del proceso hijo) o como `ArrayBuffer` (leído de caché en disco) — el
+  // renderer espera siempre `ArrayBuffer` plano para armar los
+  // `AudioBuffer`, así que se normaliza acá, en el borde real hacia afuera.
+  const normalized = {}
+  for (const [name, { ch0: a, ch1: b }] of Object.entries(stems)) {
+    const toArrayBuffer = (x) => (Buffer.isBuffer(x) ? x.buffer.slice(x.byteOffset, x.byteOffset + x.byteLength) : x)
+    normalized[name] = { ch0: toArrayBuffer(a), ch1: toArrayBuffer(b) }
+  }
+  return normalized
 })
 
 /**

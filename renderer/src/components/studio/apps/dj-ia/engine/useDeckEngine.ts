@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { BeatGrid, ColorFxType, EnergyProfile, EnergyWindow, EqBand, HotCue, KeyDetection, LoopRegion, PadMode, StructureAnalysis, Track } from '../types'
 import { HOTCUE_SLOTS, KEYBOARD_SEMITONES, LOOP_LENGTHS } from '../types'
 import { loadTrack as loadTrackFromDb, saveTrack } from './trackStorage'
+import { MultiStemSource, STEM_NAMES } from './multiStemSource'
+import type { StemBuffers, StemName } from './multiStemSource'
+import { separateStems as runStemSeparation } from './stemSeparator'
 
 function readLS<T>(key: string, fallback: T): T {
   try {
@@ -497,7 +500,16 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
 
   const bufferRef = useRef<AudioBuffer | null>(null)
   const lastFileRef = useRef<File | null>(null)
-  const sourceRef = useRef<AudioBufferSourceNode | null>(null)
+  const sourceRef = useRef<AudioBufferSourceNode | MultiStemSource | null>(null)
+  // Stems reales (voz/batería/bajo/resto) de la pista actual, separados
+  // con IA bajo demanda — `null` hasta que se aprieta "STEMS" y termina.
+  // Cambiar de pista los descarta (pertenecen a la pista anterior).
+  const stemBuffersRef = useRef<StemBuffers | null>(null)
+  const stemGainRefs = useRef<Record<StemName, GainNode> | null>(null)
+  const [stemsReady, setStemsReady] = useState(false)
+  const [isSeparatingStems, setIsSeparatingStems] = useState(false)
+  const [stemProgress, setStemProgress] = useState<{ phase: string; ratio: number } | null>(null)
+  const [stemMuted, setStemMuted] = useState<Record<StemName, boolean>>({ voz: false, bateria: false, bajo: false, resto: false })
   const startedAtRef = useRef(0)
   const offsetRef = useRef(0)
   const manualStopRef = useRef(false)
@@ -664,6 +676,19 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     vuBufRef.current = new Uint8Array(analyser.fftSize)
     freqBufRef.current = new Uint8Array(analyser.frequencyBinCount)
 
+    // Un `GainNode` persistente por stem (siempre conectado a `trimNode`,
+    // igual entrada que usa hoy la fuente única) — así un mute/unmute de
+    // stem cambia el audio al instante sin tocar la fuente que está
+    // sonando, y el estado de mute sobrevive a un seek/loop/hot cue.
+    const stemGains = STEM_NAMES.reduce((acc, stem) => {
+      const g = ctx.createGain()
+      g.gain.value = 1
+      g.connect(trimNode)
+      acc[stem] = g
+      return acc
+    }, {} as Record<StemName, GainNode>)
+    stemGainRefs.current = stemGains
+
     // Aplica EQ y Sound Color FX ya guardados (si venían de una
     // sesión anterior) al grafo recién creado — si no, quedan solo
     // en el estado de React sin sonar hasta que el usuario los toque.
@@ -681,6 +706,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
       noiseWet.disconnect(); pitchDelay.disconnect(); pitchFeedback.disconnect(); pitchWet.disconnect()
       convolver.disconnect(); spaceWet.disconnect(); crusher.disconnect(); crushWet.disconnect()
       fxSend.disconnect(); cueSend.disconnect(); fader.disconnect(); mute.disconnect(); analyser.disconnect()
+      STEM_NAMES.forEach((s) => stemGains[s].disconnect())
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ctx, output, cueBus, fxBus])
@@ -717,15 +743,20 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
 
   const startSource = useCallback((fromOffset: number, opts?: { syncPhantom?: boolean }) => {
     if (!bufferRef.current || !trimRef.current) return
-    const source = ctx.createBufferSource()
-    source.buffer = bufferRef.current
+    const stems = stemBuffersRef.current
+    const source: AudioBufferSourceNode | MultiStemSource = stems && stemGainRefs.current
+      ? new MultiStemSource(ctx, stems, stemGainRefs.current)
+      : ctx.createBufferSource()
+    if (!(source instanceof MultiStemSource)) {
+      source.buffer = bufferRef.current
+      source.connect(trimRef.current)
+    }
     source.playbackRate.value = playbackRate()
     if (loop.active && loop.start != null && loop.end != null && loop.end > loop.start) {
       source.loop = true
       source.loopStart = loop.start
       source.loopEnd = loop.end
     }
-    source.connect(trimRef.current)
     source.onended = () => {
       if (manualStopRef.current) { manualStopRef.current = false; return }
       setIsPlaying(false)
@@ -776,6 +807,11 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     offsetRef.current = 0
     setCurrentTime(0)
     setIsPlaying(false)
+    // Los stems separados son de la pista anterior — una pista nueva
+    // arranca sin stems hasta que se aprieta "STEMS" de nuevo.
+    stemBuffersRef.current = null
+    setStemsReady(false)
+    setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
     lastFileRef.current = file
     const fileIsVideo = file.type.startsWith('video/')
     setIsVideoTrack(fileIsVideo)
@@ -802,6 +838,9 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     setIsPlaying(false)
     setIsVideoTrack(false)
     setThumbnail(null)
+    stemBuffersRef.current = null
+    setStemsReady(false)
+    setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
     lastFileRef.current = null
     applyBuffer(track.buffer, track.name, track.bpm)
   }, [stopSource, applyBuffer])
@@ -1257,6 +1296,34 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
 
   const getLoadedFile = useCallback(() => lastFileRef.current, [])
 
+  const separateStemsNow = useCallback(async () => {
+    const file = lastFileRef.current
+    if (!file || isSeparatingStems) return
+    setIsSeparatingStems(true)
+    setStemProgress(null)
+    try {
+      const stems = await runStemSeparation(file, ctx, (evt) => setStemProgress(evt))
+      stemBuffersRef.current = stems
+      setStemsReady(true)
+      setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
+      // Si ya estaba sonando con la mezcla completa, pasa a los 4 stems
+      // sin cortar el audio — para en la misma posición y arranca de
+      // nuevo ahí mismo, ahora con los stems reales.
+      if (isPlaying) { stopSource(true); startSource(offsetRef.current) }
+    } catch (err) {
+      console.error('[DJ IA] separación de stems falló:', err)
+    } finally {
+      setIsSeparatingStems(false)
+      setStemProgress(null)
+    }
+  }, [ctx, isPlaying, isSeparatingStems, startSource, stopSource])
+
+  const setStemMute = useCallback((stem: StemName, mutedVal: boolean) => {
+    const gain = stemGainRefs.current?.[stem]
+    if (gain) gain.gain.value = mutedVal ? 0 : 1
+    setStemMuted((prev) => ({ ...prev, [stem]: mutedVal }))
+  }, [])
+
   return {
     trackName, isVideoTrack, thumbnail, isLoading, isPlaying, duration, currentTime, peaks, bpm, beatGrid, level, spectrum,
     getLoadedFile,
@@ -1268,6 +1335,8 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     setLoopIn, setLoopOut, exitReloop, setAutoLoop, loop4Beats, beatJump,
     triggerPad, releasePad, padFxDown, padFxUp, clearHotCues, togglePage,
     setSlip, setQuantize,
+    stemsReady, isSeparatingStems, stemProgress, stemMuted,
+    separateStemsNow, setStemMute,
   }
 }
 

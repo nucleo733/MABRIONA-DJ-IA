@@ -3,7 +3,6 @@ import { IconExpand, IconPause, IconPlay, IconRepeat, IconShuffle, IconSkipBack,
 import { useAudioEngine } from './engine/useAudioEngine'
 import { useDeckEngine, type DeckEngine } from './engine/useDeckEngine'
 import { saveTrack as saveAutoMixTrack, loadTrack as loadAutoMixTrack } from './engine/trackStorage'
-import { createKaraokeTrack, preloadKaraokeEncoder } from './engine/karaokeProcessor'
 import type { ColorFxType, EqBand, HotCue, LoopRegion, PadMode } from './types'
 import { HOTCUE_SLOTS, LOOP_LENGTHS } from './types'
 import { JogWheel, type RingLightEffect, type YtOverride } from './components/JogWheel'
@@ -1478,19 +1477,6 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
   // que retocar), así que ahora avisan en vez de quedar en silencio.
   const hasTrack = engine.trackName != null
   const isYoutubeSource = !!ytOverride
-  const [karaokeProgress, setKaraokeProgress] = useState<number | null>(null)
-  const [karaokeReady, setKaraokeReady] = useState(false)
-  // El motor de "PISTA" (ffmpeg.wasm) pesa ~32MB — precargarlo apenas se
-  // abre DJ IA evita que el primer click en "PISTA" se quede pegado en
-  // 0% varios segundos (parece trabado, no es un bug del filtro en sí)
-  // mientras baja el motor. Mismo patrón que `preloadVideoEncoder` en
-  // `CreateReelModal.tsx` de CIELO. `karaokeReady` distingue esa espera
-  // inicial ("Preparando…") del progreso real del filtro (0-100%).
-  useEffect(() => {
-    let cancelled = false
-    preloadKaraokeEncoder().then(() => { if (!cancelled) setKaraokeReady(true) })
-    return () => { cancelled = true }
-  }, [])
   const [hintMessage, setHintMessage] = useState<string | null>(null)
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const showHint = useCallback((msg: string) => {
@@ -1502,22 +1488,9 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
     if (!hasTrack) { showHint('Cargá una pista o video primero'); return }
     fn()
   }, [hasTrack, showHint])
-  const handleCreateKaraoke = useCallback(async () => {
-    const file = engine.getLoadedFile()
-    if (!file) { showHint('Cargá un archivo de audio primero'); return }
-    setKaraokeProgress(0)
-    try {
-      const karaokeFile = await createKaraokeTrack(file, (ratio) => setKaraokeProgress(ratio))
-      engine.loadFile(karaokeFile)
-    } catch (err) {
-      // Mismo criterio que el resto del motor: mostrar el motivo real en
-      // consola, no un mensaje genérico que desaparece a los 1.6s sin
-      // dejar rastro de qué falló de verdad.
-      console.error('[DJ IA] PISTA (karaoke) falló:', err)
-      showHint('No se pudo crear la pista de karaoke')
-    } finally {
-      setKaraokeProgress(null)
-    }
+  const handleSeparateStems = useCallback(() => {
+    if (!engine.getLoadedFile()) { showHint('Cargá un archivo de audio primero (no funciona sobre YouTube ni Música de MABRIONA)'); return }
+    void engine.separateStemsNow()
   }, [engine, showHint])
   const pitch = (
     <div className="flex flex-col items-center gap-1.5">
@@ -1605,21 +1578,22 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
             }}
           />
         </label>
-        <button
-          type="button"
-          onClick={() => {
-            if (!engine.getLoadedFile()) { showHint('Cargá un archivo de audio primero (no funciona sobre YouTube ni Música de MABRIONA)'); return }
-            void handleCreateKaraoke()
-          }}
-          disabled={karaokeProgress !== null}
-          className="shrink-0 rounded-md px-2 py-1 text-[9px] font-bold disabled:opacity-40"
-          style={RAISED_BTN}
-          title="Crear una versión de esta pista sin voz (karaoke, cancelación de canal central)"
-        >
-          {karaokeProgress !== null
-            ? (karaokeProgress === 0 && !karaokeReady ? 'Preparando…' : `${Math.round(karaokeProgress * 100)}%`)
-            : 'PISTA'}
-        </button>
+        {!engine.stemsReady && (
+          <button
+            type="button"
+            onClick={handleSeparateStems}
+            disabled={engine.isSeparatingStems}
+            className="shrink-0 rounded-md px-2 py-1 text-[9px] font-bold disabled:opacity-40"
+            style={RAISED_BTN}
+            title="Separar voz/batería/bajo/resto de esta pista con IA (real, no cancelación de canal — puede tardar unos minutos la primera vez)"
+          >
+            {engine.isSeparatingStems
+              ? (engine.stemProgress
+                ? (engine.stemProgress.phase === 'downloading-model' ? `Bajando IA… ${Math.round(engine.stemProgress.ratio * 100)}%` : `${Math.round(engine.stemProgress.ratio * 100)}%`)
+                : 'Preparando…')
+              : 'STEMS'}
+          </button>
+        )}
         <div className="flex flex-col items-center gap-0.5">
           <Dial
             active
@@ -1630,6 +1604,32 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
           <span className="text-[6px] tracking-[0.06em] text-white/30">JOG FEEL {jogSensitivity.toFixed(2)}x</span>
         </div>
       </div>
+      {engine.stemsReady && (
+        <div className="grid w-full grid-cols-4 gap-2">
+          {(
+            [
+              ['voz', 'VOZ', '#ff3d81'],
+              ['bateria', 'BATERÍA', '#ff9500'],
+              ['bajo', 'BAJO', '#22d3ee'],
+              ['resto', 'RESTO', dc],
+            ] as const
+          ).map(([stem, label, color]) => {
+            const audible = !engine.stemMuted[stem]
+            return (
+              <button
+                key={stem}
+                type="button"
+                onClick={() => engine.setStemMute(stem, audible)}
+                className="rounded-xl py-3 text-[12px] font-extrabold tracking-[0.06em] transition-transform active:scale-95"
+                style={audible ? raisedActive(color) : { ...RAISED_BTN, color: 'rgba(255,255,255,0.35)' }}
+                title={`${label} — ${audible ? 'sonando, tocá para silenciar' : 'silenciado, tocá para traerlo de vuelta'} (separación real por IA, HT-Demucs)`}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      )}
       <div className="relative flex items-center gap-2.5">
         {side === 'a' ? (
           <>
@@ -2075,6 +2075,13 @@ function useYoutubeDeckEngine(title: string, yt: {
     setLoopIn, setLoopOut, exitReloop, setAutoLoop, loop4Beats, beatJump,
     triggerPad, releasePad: (_mode: import('./types').PadMode) => {}, padFxDown, padFxUp, clearHotCues, togglePage,
     setSlip, setQuantize,
+    // Sin buffer real que separar (es un video de YouTube, no un
+    // archivo de audio local) — `getLoadedFile` ya devuelve `null`
+    // arriba, así que el botón "STEMS" muestra el mismo aviso que
+    // "Cargá un archivo de audio primero" en vez de intentar nada.
+    stemsReady: false, isSeparatingStems: false, stemProgress: null,
+    stemMuted: { voz: false, bateria: false, bajo: false, resto: false } as Record<'voz' | 'bateria' | 'bajo' | 'resto', boolean>,
+    separateStemsNow: async () => {}, setStemMute: (_stem: 'voz' | 'bateria' | 'bajo' | 'resto', _mutedVal: boolean) => {},
   }
 }
 
@@ -2709,10 +2716,8 @@ export function DjIaScreen() {
   useEffect(() => { persisted('dj-ia:xfAssignB', xfAssignB) }, [xfAssignB])
   useEffect(() => { persisted('dj-ia:soundColorFx', soundColorFx) }, [soundColorFx])
 
-  const [beatFxExtra, setBeatFxExtra] = useState<[number, number]>(() => readLS('dj-ia:beatFxExtra', [35, 75]))
   const [sourceShuffle, setSourceShuffle] = useState(false)
   const [sourceRepeat, setSourceRepeat] = useState(false)
-  useEffect(() => { persisted('dj-ia:beatFxExtra', beatFxExtra) }, [beatFxExtra])
 
   const crossfaderDragRef = useRef<{ x: number; value: number } | null>(null)
   const onCrossfaderPointerDown = useCallback((e: PointerEvent<HTMLDivElement>) => {
@@ -2726,6 +2731,7 @@ export function DjIaScreen() {
   }, [audio])
   const onCrossfaderPointerUp = useCallback(() => { crossfaderDragRef.current = null }, [])
 
+  const [beatFxExtra, setBeatFxExtra] = useState<[number, number]>(() => readLS('dj-ia:beatFxExtra', [35, 75]))
   const beatFxSliderDragRef = useRef<{ x: number; value: number; index: number } | null>(null)
   const onBeatFxSliderDown = useCallback((index: number, currentPct: number) => (e: PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -2740,6 +2746,7 @@ export function DjIaScreen() {
     else setBeatFxExtra((prev) => { const copy: [number, number] = [...prev]; copy[drag.index - 1] = next; return copy })
   }, [deckBEngine])
   const onBeatFxSliderUp = useCallback(() => { beatFxSliderDragRef.current = null }, [])
+  useEffect(() => { persisted('dj-ia:beatFxExtra', beatFxExtra) }, [beatFxExtra])
 
   useEffect(() => { persisted('dj-ia:videoTab', videoTab) }, [videoTab])
   useEffect(() => { persisted('dj-ia:screenBrightness', screenBrightness) }, [screenBrightness])
@@ -2764,7 +2771,7 @@ export function DjIaScreen() {
 
   return (
     <div className="w-full pb-3xl">
-      <div className="mx-auto mb-xl w-full max-w-[1600px] px-xl text-center md:px-2xl">
+      <div className="mx-auto mb-xl w-full max-w-[1600px] px-xl pt-xxl text-center md:px-2xl">
         <h2 className="text-2xl font-bold tracking-wide text-white">MATOKO</h2>
       </div>
 
