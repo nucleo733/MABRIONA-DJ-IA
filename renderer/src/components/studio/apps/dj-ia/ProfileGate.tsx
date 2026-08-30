@@ -6,12 +6,25 @@ export interface DjProfile {
   name: string
   pin: string // 4 dígitos, como string para no perder ceros a la izquierda
   photo: string | null // data URL (JPEG, ya redimensionada)
+  // Username público de Supabase (`profiles.username`) — `null` hasta
+  // que el DJ elige conectarse con otros ("DJs conectados"). El `id`
+  // de este perfil local NO es el mismo que el `user.id` de Supabase.
+  username: string | null
+  // Login anónimo real de Supabase está desactivado en este proyecto
+  // (confirmado probando: HTTP 422 "anonymous_provider_disabled") —
+  // en vez de pedirle a la Dirección que cambie esa config, cada DJ
+  // que se conecta usa un email sintético (`<random>@matoko.local`) +
+  // contraseña random, generados acá, nunca mostrados en la UI. Se
+  // guardan para poder recuperar la sesión (`signInWithPassword`) si
+  // la sesión persistida de `supabase-js` se pierde.
+  supabaseEmail: string | null
+  supabasePassword: string | null
 }
 
-const PROFILES_KEY = 'dj-ia:profiles'
+export const PROFILES_KEY = 'dj-ia:profiles'
 const GLOW = ['#ff3d81', '#ff9500', '#22d3ee', '#d4ff00', '#b26bff']
 
-function readProfiles(): DjProfile[] {
+export function readProfiles(): DjProfile[] {
   try {
     const raw = localStorage.getItem(PROFILES_KEY)
     return raw ? (JSON.parse(raw) as DjProfile[]) : []
@@ -20,8 +33,15 @@ function readProfiles(): DjProfile[] {
   }
 }
 
-function writeProfiles(profiles: DjProfile[]) {
+export function writeProfiles(profiles: DjProfile[]) {
   try { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)) } catch { /* localStorage lleno o bloqueado, no es crítico */ }
+}
+
+/** Actualiza un perfil ya guardado (ej. después de ponerse un username) y devuelve la lista nueva. */
+export function updateProfile(id: string, patch: Partial<DjProfile>): DjProfile[] {
+  const next = readProfiles().map((p) => (p.id === id ? { ...p, ...patch } : p))
+  writeProfiles(next)
+  return next
 }
 
 /**
@@ -113,7 +133,7 @@ function NewProfileForm({ onCreate, onCancel }: { onCreate: (p: DjProfile) => vo
       if (next.length === 4) {
         if (next !== pin) { setError('El PIN no coincide — probá de nuevo'); setPin(''); setPinConfirm(''); setStage('pin'); return }
         if (!name.trim()) { setError('Ponele un nombre primero'); return }
-        onCreate({ id: `dj-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: name.trim(), pin: next, photo })
+        onCreate({ id: `dj-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: name.trim(), pin: next, photo, username: null, supabaseEmail: null, supabasePassword: null })
       }
     }
   }

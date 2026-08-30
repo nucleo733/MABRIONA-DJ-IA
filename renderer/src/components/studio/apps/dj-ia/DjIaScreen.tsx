@@ -13,6 +13,10 @@ import { updateTrackHotCues } from './engine/musicLibraryRepository'
 import { getGenreWeights, logDjSessionEnded, logDjSessionStarted, readProfile, weightedShuffle } from '../../../../core/musicIntelligence'
 import { describeYoutubeError, isValidYoutubeVideoId, volumeToYoutubeScale } from './engine/youtubePlayback'
 import { useAuth } from '../../../../auth/AuthContext'
+import type { DjProfile } from './ProfileGate'
+import { updateProfile } from './ProfileGate'
+import { useDjNetwork } from './engine/djNetwork'
+import { ConnectedDjsPanel } from './components/ConnectedDjsPanel'
 
 /** Metadata opcional de YouTube (título/canal/miniatura/duración) que viaja junto con id+título al agregar un video — la usa la Biblioteca para no guardar solo un id pelado. */
 interface YtMeta {
@@ -2394,7 +2398,7 @@ function MiniPlayer({ deckA, deckB, onOpenSource }: { deckA: DeckEngine; deckB: 
   )
 }
 
-export function DjIaScreen() {
+export function DjIaScreen({ profile, onProfileUpdate }: { profile: DjProfile; onProfileUpdate: (p: DjProfile) => void }) {
   const audio = useAudioEngine()
   const fxBus = useMemo(() => audio.ctx.createGain(), [audio.ctx])
   // Etapa 5 — solo para el historial y las colas reales (ver
@@ -2408,6 +2412,8 @@ export function DjIaScreen() {
   // ajustan parámetros de verdad del motor (no solo una etiqueta).
   const [djiaActive, setDjiaActive] = useState(() => readLS('dj-ia:djiaActive', false))
   const [showMatokoAutoModal, setShowMatokoAutoModal] = useState(false)
+  const [showConnectedDjs, setShowConnectedDjs] = useState(false)
+  const djNetwork = useDjNetwork(profile)
   const [energyMode, setEnergyMode] = useState<EnergyMode>(() => readLS('dj-ia:energyMode', 'normal' as EnergyMode))
   const [cleanMode, setCleanMode] = useState(() => readLS('dj-ia:cleanMode', false))
   const [smartVolume, setSmartVolume] = useState(() => readLS('dj-ia:smartVolume', false))
@@ -3312,6 +3318,15 @@ export function DjIaScreen() {
               >
                 🌎 MATOKO Automático
               </button>
+              <button
+                type="button"
+                onClick={() => setShowConnectedDjs(true)}
+                className="rounded-full px-3.5 py-2 text-[11px] font-bold"
+                style={profile.username ? raisedActive('#22d3ee') : RAISED_BTN}
+                title="Conectarte con otros DJs por username (sin importar la red ni la distancia) y mandarse canciones"
+              >
+                🌐 {profile.username ? `@${profile.username}` : 'DJs conectados'}
+              </button>
 
               {djiaActive && (
                 <>
@@ -3638,6 +3653,38 @@ export function DjIaScreen() {
       </div>
       {showMatokoAutoModal && (
         <MatokoAutoModal onClose={() => setShowMatokoAutoModal(false)} onConfirm={(rows) => void onMatokoAutoConfirm(rows)} />
+      )}
+      {showConnectedDjs && (
+        <ConnectedDjsPanel
+          profile={profile}
+          currentTrack={ytVideoId1 ? { id: ytVideoId1, title: ytTitle1 ?? ytVideoId1 } : null}
+          linking={djNetwork.linking}
+          linkError={djNetwork.linkError}
+          onClaimUsername={async (username) => {
+            const claimed = await djNetwork.claimUsername(username, profile.name)
+            if (!claimed) return null
+            const patch = { username: claimed.username, supabaseEmail: claimed.email, supabasePassword: claimed.password }
+            onProfileUpdate(updateProfile(profile.id, patch).find((p) => p.id === profile.id) ?? { ...profile, ...patch })
+            return claimed.username
+          }}
+          onSearch={djNetwork.searchDjs}
+          onSend={async (dj) => { if (ytVideoId1) await djNetwork.sendTrack(dj.id, profile.username ?? profile.name, { id: ytVideoId1, title: ytTitle1 ?? ytVideoId1 }) }}
+          onClose={() => setShowConnectedDjs(false)}
+        />
+      )}
+      {djNetwork.incoming && (
+        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-xl p-3" style={{ ...METAL_PANEL, boxShadow: `${METAL_PANEL.boxShadow}, 0 0 20px rgba(34,211,238,0.4)` }}>
+          <span className="text-[10.5px] text-white/85">🎵 <b>@{djNetwork.incoming.fromUsername}</b> te mandó: {djNetwork.incoming.title}</span>
+          <button
+            type="button"
+            onClick={() => { if (djNetwork.incoming) loadYoutubeToDeck(djNetwork.incoming.id, djNetwork.incoming.title, ytVideoId1 ? 2 : 1); djNetwork.clearIncoming() }}
+            className="rounded-md px-2.5 py-1 text-[10px] font-bold text-black"
+            style={{ background: '#22d3ee' }}
+          >
+            Agregar
+          </button>
+          <button type="button" onClick={djNetwork.clearIncoming} className="text-white/40 hover:text-white/70">✕</button>
+        </div>
       )}
     </div>
   )

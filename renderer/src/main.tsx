@@ -89,7 +89,7 @@ function App() {
         {isMac && <BrandBar />}
         <UpdateBanner onVisibleChange={setHasUpdateBanner} />
         <div className="min-h-0 flex-1 overflow-auto" style={topBarsHeight ? { height: `calc(100vh - ${topBarsHeight}px)` } : undefined}>
-          {session ? <DjIaScreen /> : <ProfileGate onEnter={setSession} />}
+          {session ? <DjIaScreen profile={session} onProfileUpdate={setSession} /> : <ProfileGate onEnter={setSession} />}
         </div>
       </div>
     </AuthProvider>

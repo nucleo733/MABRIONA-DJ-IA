@@ -12,6 +12,7 @@
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "@supabase/supabase-js": "^2.112.4",
     "music-metadata": "^11.15.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
