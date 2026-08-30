@@ -1589,22 +1589,6 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
             }}
           />
         </label>
-        {!engine.stemsReady && (
-          <button
-            type="button"
-            onClick={handleSeparateStems}
-            disabled={engine.isSeparatingStems}
-            className="shrink-0 rounded-md px-2 py-1 text-[9px] font-bold disabled:opacity-40"
-            style={RAISED_BTN}
-            title="Separar voz/batería/bajo/resto de esta pista con IA (real, no cancelación de canal — puede tardar unos minutos la primera vez)"
-          >
-            {engine.isSeparatingStems
-              ? (engine.stemProgress
-                ? (engine.stemProgress.phase === 'downloading-model' ? `Bajando IA… ${Math.round(engine.stemProgress.ratio * 100)}%` : `${Math.round(engine.stemProgress.ratio * 100)}%`)
-                : 'Preparando…')
-              : 'STEMS'}
-          </button>
-        )}
         <div className="flex flex-col items-center gap-0.5">
           <Dial
             active
@@ -1615,6 +1599,24 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
           <span className="text-[6px] tracking-[0.06em] text-white/30">JOG FEEL {jogSensitivity.toFixed(2)}x</span>
         </div>
       </div>
+      <div className="w-full rounded-xl border p-2" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+        <div className="mb-1.5 text-[8px] font-bold tracking-[0.14em] text-white/35">SEPARAR VOZ / BATERÍA / BAJO / RESTO (IA)</div>
+        {!engine.stemsReady && (
+          <button
+            type="button"
+            onClick={handleSeparateStems}
+            disabled={engine.isSeparatingStems}
+            className="w-full rounded-md py-1.5 text-[9px] font-bold disabled:opacity-40"
+            style={RAISED_BTN}
+            title="Separar voz/batería/bajo/resto de esta pista con IA (real, no cancelación de canal — puede tardar unos minutos la primera vez)"
+          >
+            {engine.isSeparatingStems
+              ? (engine.stemProgress
+                ? (engine.stemProgress.phase === 'downloading-model' ? `Bajando IA… ${Math.round(engine.stemProgress.ratio * 100)}%` : `${Math.round(engine.stemProgress.ratio * 100)}%`)
+                : 'Preparando…')
+              : 'TOCÁ ACÁ PARA SEPARAR'}
+          </button>
+        )}
       {engine.stemsReady && (
         <div className="grid w-full grid-cols-5 gap-2">
           {(
@@ -1650,6 +1652,7 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
           </button>
         </div>
       )}
+      </div>
       <div className="relative flex items-center gap-2.5">
         {side === 'a' ? (
           <>
