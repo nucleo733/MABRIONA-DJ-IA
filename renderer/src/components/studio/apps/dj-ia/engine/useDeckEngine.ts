@@ -1079,6 +1079,14 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     setLoop(next)
   }, [loop, applyLoopToSource, slip, isPlaying, phantomNowSeconds, stopSource, startSource])
 
+  // Vacía el loop del todo (IN/OUT/ACTIVE quedan sin marcar) — distinto
+  // de `exitReloop`, que solo prende/apaga un loop que ya quedó armado.
+  const clearLoop = useCallback(() => {
+    const next: LoopRegion = { start: null, end: null, active: false }
+    applyLoopToSource(next)
+    setLoop(next)
+  }, [applyLoopToSource])
+
   const setAutoLoop = useCallback((beats: number) => {
     const beatSeconds = 60 / (bpm ?? DEFAULT_BPM)
     const start = quantizedNow()
@@ -1332,7 +1340,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     loadFile, loadTrack, togglePlay, cuePress, seekTo, nudge,
     setGain, setTrim, setEq, setColorFxType, setColorFxAmount, toggleMuted, toggleCue, setFxSendActive,
     setPitch, resetTempo, cycleTempoRange, tapTempo, syncTo,
-    setLoopIn, setLoopOut, exitReloop, setAutoLoop, loop4Beats, beatJump,
+    setLoopIn, setLoopOut, exitReloop, clearLoop, setAutoLoop, loop4Beats, beatJump,
     triggerPad, releasePad, padFxDown, padFxUp, clearHotCues, togglePage,
     setSlip, setQuantize,
     stemsReady, isSeparatingStems, stemProgress, stemMuted,

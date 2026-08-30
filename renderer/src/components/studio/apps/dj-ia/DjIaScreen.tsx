@@ -1605,7 +1605,7 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
         </div>
       </div>
       {engine.stemsReady && (
-        <div className="grid w-full grid-cols-4 gap-2">
+        <div className="grid w-full grid-cols-5 gap-2">
           {(
             [
               ['voz', 'VOZ', '#ff3d81'],
@@ -1628,6 +1628,15 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
               </button>
             )
           })}
+          <button
+            type="button"
+            onClick={() => { (['voz', 'bateria', 'bajo', 'resto'] as const).forEach((stem) => engine.setStemMute(stem, false)) }}
+            className="rounded-xl py-3 text-[12px] font-extrabold tracking-[0.06em] transition-transform active:scale-95"
+            style={{ ...RAISED_BTN, color: 'rgba(255,255,255,0.75)' }}
+            title="Traer de vuelta los 4 al toque — la canción vuelve a sonar completa, normal"
+          >
+            NORMAL
+          </button>
         </div>
       )}
       <div className="relative flex items-center gap-2.5">
@@ -1687,6 +1696,7 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
           <button type="button" onClick={guard(engine.setLoopIn)} className="flex-1 rounded-md py-1 text-center text-[9px] font-bold text-white/45" style={RAISED_BTN}>IN</button>
           <button type="button" onClick={guard(engine.setLoopOut)} className="flex-1 rounded-md py-1 text-center text-[9px] font-bold text-white/45" style={RAISED_BTN}>OUT</button>
           <button type="button" onClick={guard(engine.exitReloop)} className="flex-1 rounded-md py-1 text-center text-[9px] font-bold" style={engine.loop.active ? raisedActive(dc) : { ...RAISED_BTN, color: 'rgba(255,255,255,0.45)' }}>ACTIVE</button>
+          <button type="button" onClick={guard(engine.clearLoop)} className="flex-1 rounded-md py-1 text-center text-[9px] font-bold text-white/45" style={RAISED_BTN} title="Vaciar el loop (IN/OUT/ACTIVE quedan sin marcar)">VACIAR</button>
         </div>
         <div className="grid grid-cols-7 gap-1">
           {QUICK_LOOP_LABELS.map((c) => {
@@ -2016,6 +2026,7 @@ function useYoutubeDeckEngine(title: string, yt: {
     })
   }, [yt])
   const exitReloop = useCallback(() => { setLoop((prev) => ({ ...prev, active: !prev.active })) }, [])
+  const clearLoop = useCallback(() => { setLoop({ start: null, end: null, active: false }) }, [])
   const setAutoLoop = useCallback((beats: number) => {
     const beatSeconds = 60 / (bpm ?? 120)
     const start = yt.currentTime
@@ -2072,7 +2083,7 @@ function useYoutubeDeckEngine(title: string, yt: {
     loadFile, loadTrack, togglePlay, cuePress, seekTo, nudge,
     setGain, setTrim, setEq, setColorFxType, setColorFxAmount, toggleMuted, toggleCue, setFxSendActive,
     setPitch, resetTempo, cycleTempoRange, tapTempo, syncTo,
-    setLoopIn, setLoopOut, exitReloop, setAutoLoop, loop4Beats, beatJump,
+    setLoopIn, setLoopOut, exitReloop, clearLoop, setAutoLoop, loop4Beats, beatJump,
     triggerPad, releasePad: (_mode: import('./types').PadMode) => {}, padFxDown, padFxUp, clearHotCues, togglePage,
     setSlip, setQuantize,
     // Sin buffer real que separar (es un video de YouTube, no un
