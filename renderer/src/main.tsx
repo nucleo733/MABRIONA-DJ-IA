@@ -19,7 +19,7 @@ function BrandBar() {
       className="flex h-10 shrink-0 items-center justify-center bg-gradient-to-r from-violet-500 to-sky-400"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
-      <img src="/matoko-logo.png" alt="MATOKO DJ" className="h-6 w-6 rounded-md" draggable={false} />
+      <img src="/matoko-mark.png" alt="MATOKO DJ" className="h-7 w-7 rounded-full ring-1 ring-white/40 shadow-md" draggable={false} />
     </div>
   )
 }

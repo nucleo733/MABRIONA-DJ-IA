@@ -2765,7 +2765,7 @@ export function DjIaScreen() {
   return (
     <div className="w-full pb-3xl">
       <div className="mx-auto mb-xl w-full max-w-[1600px] px-xl text-center md:px-2xl">
-        <h2 className="text-2xl font-bold tracking-wide text-white">DJ IA</h2>
+        <h2 className="text-2xl font-bold tracking-wide text-white">MATOKO</h2>
       </div>
 
       <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3.5 px-xl pb-2xl md:px-2xl">
