@@ -2876,6 +2876,19 @@ export function DjIaScreen() {
     return () => clearInterval(id)
   }, [ytAutoOn])
 
+  // Si un video de la cola automática falla (privado, con embed
+  // bloqueado por el dueño, borrado, etc. — pasa de verdad, ya lo vimos
+  // probando "MATOKO Automático"), antes se quedaba trabado mostrando
+  // el aviso rojo para siempre. Ahora salta solo a la siguiente
+  // canción real de la cola, como un DJ de verdad que si un tema no
+  // suena prueba con el que sigue — no reintenta el mismo video (casi
+  // siempre el bloqueo es permanente, reintentar solo perdería tiempo).
+  useEffect(() => {
+    if (!ytAutoOn || ytPlayer1.status !== 'error') return
+    const id = setTimeout(() => onAdvanceYtAutoRef.current(), 1200)
+    return () => clearTimeout(id)
+  }, [ytAutoOn, ytPlayer1.status])
+
   // CH3/CH4 del mezclador no tienen plato real detrás (la app solo
   // tiene 2 decks) — quedan con su propio estado local, interactivo
   // de verdad (arrastrar mueve el fader/perilla) pero sin pretender
