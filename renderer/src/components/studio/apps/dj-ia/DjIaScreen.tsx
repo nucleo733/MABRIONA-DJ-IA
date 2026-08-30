@@ -1280,10 +1280,31 @@ const DECK_B = '#b26bff'
  * suave en "suave", más corto y directo en "fiesta") y el nivel real
  * del master.
  */
-type EnergyMode = 'suave' | 'normal' | 'fiesta'
-const ENERGY_TRANSITION_SECONDS: Record<EnergyMode, number> = { suave: 14, normal: 8, fiesta: 4 }
-const ENERGY_MASTER_LEVEL: Record<EnergyMode, number> = { suave: 0.8, normal: 0.9, fiesta: 1 }
-const ENERGY_LABELS: Record<EnergyMode, string> = { suave: 'Suave', normal: 'Normal', fiesta: 'Fiesta' }
+type EnergyMode = 'suave' | 'normal' | 'fiesta' | 'noche' | 'amanecer'
+const ENERGY_TRANSITION_SECONDS: Record<EnergyMode, number> = { suave: 14, normal: 8, fiesta: 4, noche: 16, amanecer: 18 }
+const ENERGY_MASTER_LEVEL: Record<EnergyMode, number> = { suave: 0.8, normal: 0.9, fiesta: 1, noche: 0.7, amanecer: 0.65 }
+const ENERGY_LABELS: Record<EnergyMode, string> = { suave: 'Suave', normal: 'Normal', fiesta: 'Fiesta', noche: 'Noche', amanecer: 'Amanecer' }
+// Qué pone a sonar cada modo — no es solo un ajuste de volumen/velocidad
+// de transición (lo que ya hacían suave/normal/fiesta), busca de
+// verdad en YouTube y arma una cola real con el clima de cada momento.
+// Reusa el mismo motor que "MATOKO Automático" (`onGenerateGenreQueue`/
+// `onMatokoAutoConfirm`), solo cambia de dónde salen los géneros.
+const ENERGY_GENRE_ROWS: Record<EnergyMode, GenreMixRow[]> = {
+  suave: [{ genre: 'música suave relajante', count: 4 }, { genre: 'acústico lounge', count: 3 }],
+  normal: [{ genre: 'éxitos del momento', count: 4 }, { genre: 'pop reggaetón mix', count: 3 }],
+  fiesta: [{ genre: 'música de fiesta reggaetón', count: 4 }, { genre: 'dembow perreo mix', count: 3 }],
+  noche: [{ genre: 'música para la noche chill', count: 4 }, { genre: 'r&b lounge nocturno', count: 3 }],
+  amanecer: [{ genre: 'música relajante para despertar', count: 4 }, { genre: 'chill acústico amanecer', count: 3 }],
+}
+// Sugerencia automática por horario real de la Mac ("MATOKO pone
+// música por horario") — solo sugiere el modo al activar MATOKO, el
+// usuario lo puede cambiar a mano en cualquier momento después.
+function suggestEnergyModeByHour(hour: number): EnergyMode {
+  if (hour >= 5 && hour < 8) return 'amanecer'
+  if (hour >= 8 && hour < 19) return 'normal'
+  if (hour >= 19 && hour < 23) return 'fiesta'
+  return 'noche' // 23:00-04:59
+}
 
 interface ScheduleConfig { enabled: boolean; days: number[]; time: string; target: 'mezcla' | 'lista' }
 const WEEKDAY_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -1779,40 +1800,62 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
             No se pudo separar: {engine.stemError}
           </div>
         )}
-      {engine.stemsReady && (
-        <div className="grid w-full grid-cols-5 gap-2">
-          {(
-            [
-              ['voz', 'VOZ', '#ff3d81'],
-              ['bateria', 'BATERÍA', '#ff9500'],
-              ['bajo', 'BAJO', '#22d3ee'],
-              ['resto', 'RESTO', dc],
-            ] as const
-          ).map(([stem, label, color]) => {
-            const audible = !engine.stemMuted[stem]
-            return (
-              <button
-                key={stem}
-                type="button"
-                onClick={() => engine.setStemMute(stem, audible)}
-                className="rounded-xl py-3 text-[12px] font-extrabold tracking-[0.06em] transition-transform active:scale-95"
-                style={audible ? raisedActive(color) : { ...RAISED_BTN, color: 'rgba(255,255,255,0.35)' }}
-                title={`${label} — ${audible ? 'sonando, tocá para silenciar' : 'silenciado, tocá para traerlo de vuelta'} (separación real por IA, HT-Demucs)`}
-              >
-                {label}
-              </button>
-            )
-          })}
+      {engine.stemsReady && engine.stemsEngaged && (
+        <>
+          <div className="grid w-full grid-cols-5 gap-2">
+            {(
+              [
+                ['voz', 'VOZ', '#ff3d81'],
+                ['bateria', 'BATERÍA', '#ff9500'],
+                ['bajo', 'BAJO', '#22d3ee'],
+                ['resto', 'RESTO', dc],
+              ] as const
+            ).map(([stem, label, color]) => {
+              const audible = !engine.stemMuted[stem]
+              return (
+                <button
+                  key={stem}
+                  type="button"
+                  onClick={() => engine.setStemMute(stem, audible)}
+                  className="rounded-xl py-3 text-[12px] font-extrabold tracking-[0.06em] transition-transform active:scale-95"
+                  style={audible ? raisedActive(color) : { ...RAISED_BTN, color: 'rgba(255,255,255,0.35)' }}
+                  title={`${label} — ${audible ? 'sonando, tocá para silenciar' : 'silenciado, tocá para traerlo de vuelta'} (separación real por IA, HT-Demucs)`}
+                >
+                  {label}
+                </button>
+              )
+            })}
+            <button
+              type="button"
+              onClick={() => { (['voz', 'bateria', 'bajo', 'resto'] as const).forEach((stem) => engine.setStemMute(stem, false)) }}
+              className="rounded-xl py-3 text-[12px] font-extrabold tracking-[0.06em] transition-transform active:scale-95"
+              style={{ ...RAISED_BTN, color: 'rgba(255,255,255,0.75)' }}
+              title="Traer de vuelta los 4 al toque — la canción vuelve a sonar completa, normal"
+            >
+              NORMAL
+            </button>
+          </div>
           <button
             type="button"
-            onClick={() => { (['voz', 'bateria', 'bajo', 'resto'] as const).forEach((stem) => engine.setStemMute(stem, false)) }}
-            className="rounded-xl py-3 text-[12px] font-extrabold tracking-[0.06em] transition-transform active:scale-95"
-            style={{ ...RAISED_BTN, color: 'rgba(255,255,255,0.75)' }}
-            title="Traer de vuelta los 4 al toque — la canción vuelve a sonar completa, normal"
+            onClick={() => engine.revertStemsToNormal()}
+            className="w-full rounded-lg py-1.5 text-[9px] font-bold text-white/45"
+            style={RAISED_BTN}
+            title="Dejar de usar los stems del todo y volver a la mezcla original de un solo audio — no hay que separar de nuevo si querés volver a esto"
           >
-            NORMAL
+            ⏪ Volver atrás (sin stems)
           </button>
-        </div>
+        </>
+      )}
+      {engine.stemsReady && !engine.stemsEngaged && (
+        <button
+          type="button"
+          onClick={() => engine.reEngageStems()}
+          className="w-full rounded-lg py-2 text-[10px] font-bold"
+          style={RAISED_BTN}
+          title="Volver a usar la voz/batería/bajo/resto ya separados — al toque, sin re-procesar"
+        >
+          🔀 Volver a stems (voz/batería/bajo/resto)
+        </button>
       )}
       </div>
       <div className="relative flex items-center gap-2.5">
@@ -2267,9 +2310,10 @@ function useYoutubeDeckEngine(title: string, yt: {
     // archivo de audio local) — `getLoadedFile` ya devuelve `null`
     // arriba, así que el botón "STEMS" muestra el mismo aviso que
     // "Cargá un archivo de audio primero" en vez de intentar nada.
-    stemsReady: false, isSeparatingStems: false, stemProgress: null, stemError: null,
+    stemsReady: false, stemsEngaged: false, isSeparatingStems: false, stemProgress: null, stemError: null,
     stemMuted: { voz: false, bateria: false, bajo: false, resto: false } as Record<'voz' | 'bateria' | 'bajo' | 'resto', boolean>,
     separateStemsNow: async () => {}, setStemMute: (_stem: 'voz' | 'bateria' | 'bajo' | 'resto', _mutedVal: boolean) => {},
+    revertStemsToNormal: () => {}, reEngageStems: () => {},
   }
 }
 
@@ -3242,7 +3286,18 @@ export function DjIaScreen() {
             <div className="relative flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
-                onClick={() => setDjiaActive((v) => !v)}
+                onClick={() => {
+                  const next = !djiaActive
+                  setDjiaActive(next)
+                  // Al activar, sugiere el modo según la hora real de la
+                  // Mac ("MATOKO pone música por horario") y pone música
+                  // real ya — el usuario lo puede cambiar a mano después.
+                  if (next) {
+                    const suggested = suggestEnergyModeByHour(new Date().getHours())
+                    setEnergyMode(suggested)
+                    void onMatokoAutoConfirm(ENERGY_GENRE_ROWS[suggested])
+                  }
+                }}
                 className="rounded-full px-3.5 py-2 text-[11px] font-bold"
                 style={djiaActive ? raisedActive(DECK_A) : RAISED_BTN}
               >
@@ -3261,13 +3316,14 @@ export function DjIaScreen() {
               {djiaActive && (
                 <>
                   <div className="flex items-center gap-1 rounded-full p-1" style={RAISED_BTN}>
-                    {(['suave', 'normal', 'fiesta'] as EnergyMode[]).map((m) => (
+                    {(['suave', 'normal', 'fiesta', 'noche', 'amanecer'] as EnergyMode[]).map((m) => (
                       <button
                         key={m}
                         type="button"
-                        onClick={() => setEnergyMode(m)}
+                        onClick={() => { setEnergyMode(m); void onMatokoAutoConfirm(ENERGY_GENRE_ROWS[m]) }}
                         className="rounded-full px-2.5 py-1 text-[10px] font-bold"
                         style={energyMode === m ? { background: DECK_A, color: '#000' } : { color: 'rgba(255,255,255,0.5)' }}
+                        title={`Pone a sonar música real de YouTube con el clima de "${ENERGY_LABELS[m]}"`}
                       >
                         {ENERGY_LABELS[m]}
                       </button>

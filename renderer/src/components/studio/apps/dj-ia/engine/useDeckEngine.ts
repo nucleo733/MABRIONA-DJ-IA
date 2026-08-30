@@ -507,6 +507,13 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
   const stemBuffersRef = useRef<StemBuffers | null>(null)
   const stemGainRefs = useRef<Record<StemName, GainNode> | null>(null)
   const [stemsReady, setStemsReady] = useState(false)
+  // Distinto de `stemsReady` (que solo dice "ya se separó, hay stems
+  // disponibles") — este controla si el plato está USANDO esos stems
+  // ahora mismo o volvió a la mezcla completa de un solo buffer.
+  // Separar de nuevo no hace falta para ir y volver: los buffers ya
+  // separados quedan en `stemBuffersRef`, solo cambia si `startSource`
+  // los usa o no.
+  const [stemsEngaged, setStemsEngaged] = useState(false)
   const [isSeparatingStems, setIsSeparatingStems] = useState(false)
   const [stemProgress, setStemProgress] = useState<{ phase: string; ratio: number } | null>(null)
   const [stemError, setStemError] = useState<string | null>(null)
@@ -744,7 +751,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
 
   const startSource = useCallback((fromOffset: number, opts?: { syncPhantom?: boolean }) => {
     if (!bufferRef.current || !trimRef.current) return
-    const stems = stemBuffersRef.current
+    const stems = stemsEngaged ? stemBuffersRef.current : null
     const source: AudioBufferSourceNode | MultiStemSource = stems && stemGainRefs.current
       ? new MultiStemSource(ctx, stems, stemGainRefs.current)
       : ctx.createBufferSource()
@@ -773,7 +780,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     // Las intervenciones de Slip pasan `syncPhantom: false` a propósito
     // para que el fantasma siga corriendo solo mientras dura el hold.
     if (opts?.syncPhantom !== false) syncPhantom(fromOffset, true)
-  }, [ctx, loop, playbackRate, syncPhantom])
+  }, [ctx, loop, playbackRate, syncPhantom, stemsEngaged])
 
   const applyBuffer = useCallback((decoded: AudioBuffer, name: string, knownBpm?: number, knownBeatGrid?: BeatGrid, knownHotCues?: HotCue[] | null) => {
     bufferRef.current = decoded
@@ -811,6 +818,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     // Los stems separados son de la pista anterior — una pista nueva
     // arranca sin stems hasta que se aprieta "STEMS" de nuevo.
     stemBuffersRef.current = null
+    setStemsEngaged(false)
     setStemsReady(false)
     setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
     setStemError(null)
@@ -841,6 +849,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     setIsVideoTrack(false)
     setThumbnail(null)
     stemBuffersRef.current = null
+    setStemsEngaged(false)
     setStemsReady(false)
     setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
     setStemError(null)
@@ -867,6 +876,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     setHotCues(Array.from({ length: HOTCUE_SLOTS }, () => ({ time: null })))
     setLoop({ start: null, end: null, active: false })
     stemBuffersRef.current = null
+    setStemsEngaged(false)
     setStemsReady(false)
     setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
     setStemError(null)
@@ -1346,6 +1356,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
       const stems = await runStemSeparation(buffer, ctx, (evt) => setStemProgress(evt))
       stemBuffersRef.current = stems
       setStemsReady(true)
+      setStemsEngaged(true)
       setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
       // Si ya estaba sonando con la mezcla completa, pasa a los 4 stems
       // sin cortar el audio — para en la misma posición y arranca de
@@ -1359,6 +1370,23 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
       setStemProgress(null)
     }
   }, [ctx, isPlaying, isSeparatingStems, startSource, stopSource])
+
+  // Vuelve atrás de los stems — deja de tocar las 4 fuentes separadas
+  // y vuelve a la mezcla completa original de un solo buffer. Los
+  // buffers ya separados NO se borran (`stemBuffersRef` queda intacto)
+  // — volver a engancharlos con `reEngageStems` es instantáneo, sin
+  // separar de nuevo ni tocar la caché en disco.
+  const revertStemsToNormal = useCallback(() => {
+    if (!stemsEngaged) return
+    setStemsEngaged(false)
+    if (isPlaying) { stopSource(true); startSource(offsetRef.current) }
+  }, [stemsEngaged, isPlaying, startSource, stopSource])
+
+  const reEngageStems = useCallback(() => {
+    if (stemsEngaged || !stemBuffersRef.current) return
+    setStemsEngaged(true)
+    if (isPlaying) { stopSource(true); startSource(offsetRef.current) }
+  }, [stemsEngaged, isPlaying, startSource, stopSource])
 
   const setStemMute = useCallback((stem: StemName, mutedVal: boolean) => {
     const gain = stemGainRefs.current?.[stem]
@@ -1377,8 +1405,8 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     setLoopIn, setLoopOut, exitReloop, clearLoop, setAutoLoop, loop4Beats, beatJump,
     triggerPad, releasePad, padFxDown, padFxUp, clearHotCues, togglePage,
     setSlip, setQuantize,
-    stemsReady, isSeparatingStems, stemProgress, stemMuted, stemError,
-    separateStemsNow, setStemMute,
+    stemsReady, stemsEngaged, isSeparatingStems, stemProgress, stemMuted, stemError,
+    separateStemsNow, setStemMute, revertStemsToNormal, reEngageStems,
   }
 }
 
