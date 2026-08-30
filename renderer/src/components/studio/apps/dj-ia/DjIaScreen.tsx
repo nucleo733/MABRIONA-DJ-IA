@@ -861,6 +861,27 @@ function AutoMixView({
   )
 }
 
+// Géneros típicos reales por país — usado por "MATOKO Automático" para
+// precargar la Lista Automática por Género (`GenreMixRow`) sin que el
+// usuario tenga que escribir los géneros a mano. No es una lista
+// exhaustiva de todo lo que se escucha en cada país, son los géneros
+// más asociados a cada uno para armar una mezcla reconocible.
+interface CountryGenres { country: string; flag: string; genres: string[] }
+const COUNTRY_GENRES: CountryGenres[] = [
+  { country: 'República Dominicana', flag: '🇩🇴', genres: ['bachata', 'merengue', 'salsa', 'dembow', 'música típica'] },
+  { country: 'México', flag: '🇲🇽', genres: ['banda', 'mariachi', 'corridos tumbados', 'cumbia', 'reggaetón mexicano'] },
+  { country: 'Colombia', flag: '🇨🇴', genres: ['vallenato', 'salsa', 'reggaetón', 'champeta', 'cumbia colombiana'] },
+  { country: 'Puerto Rico', flag: '🇵🇷', genres: ['reggaetón', 'trap latino', 'salsa', 'bomba y plena'] },
+  { country: 'Cuba', flag: '🇨🇺', genres: ['salsa cubana', 'timba', 'son cubano', 'reggaetón cubano'] },
+  { country: 'Venezuela', flag: '🇻🇪', genres: ['salsa venezolana', 'gaita zuliana', 'reggaetón', 'joropo'] },
+  { country: 'Argentina', flag: '🇦🇷', genres: ['cumbia argentina', 'RKT', 'rock argentino', 'trap argentino'] },
+  { country: 'España', flag: '🇪🇸', genres: ['flamenco', 'reggaetón español', 'pop español', 'rumba catalana'] },
+  { country: 'Brasil', flag: '🇧🇷', genres: ['funk brasileño', 'sertanejo', 'pagode', 'samba'] },
+  { country: 'Panamá', flag: '🇵🇦', genres: ['reggaetón panameño', 'plena panameña', 'salsa'] },
+  { country: 'Perú', flag: '🇵🇪', genres: ['cumbia peruana', 'salsa peruana', 'huayno'] },
+  { country: 'Estados Unidos', flag: '🇺🇸', genres: ['hip hop', 'r&b', 'pop', 'reggaetón latino usa'] },
+]
+
 interface GenreMixRow { genre: string; count: number }
 const DEFAULT_GENRE_MIX: GenreMixRow[] = [
   { genre: 'bachata', count: 5 },
@@ -936,6 +957,100 @@ function GenreAutoView({
       >
         {generating ? 'Generando…' : '🎲 Generar lista'}
       </button>
+    </div>
+  )
+}
+
+/**
+ * "MATOKO Automático" — panel guiado país → géneros, para no tener
+ * que armar la Lista Automática por Género a mano. Reusa el mismo
+ * motor que `GenreAutoView` (mismo estado `genreMix`, misma
+ * `onGenerateGenreQueue`/`onStartYtAuto`) — este modal solo precarga
+ * esos géneros con las cantidades elegidas (0-10) y dispara la
+ * generación + el arranque automático.
+ */
+function MatokoAutoModal({ onClose, onConfirm }: {
+  onClose: () => void
+  onConfirm: (rows: GenreMixRow[]) => void
+}) {
+  const [country, setCountry] = useState<CountryGenres | null>(null)
+  const [counts, setCounts] = useState<Record<string, number>>({})
+
+  const selectCountry = (c: CountryGenres) => {
+    setCountry(c)
+    setCounts(Object.fromEntries(c.genres.map((g) => [g, 3])))
+  }
+
+  const GLOW_PALETTE = ['#ff3d81', '#ff9500', '#22d3ee', '#d4ff00', '#b26bff', '#ff5555']
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)' }} onClick={onClose}>
+      <div className="relative max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl p-5" style={METAL_PANEL} onClick={(e) => e.stopPropagation()}>
+        <MetalGrain />
+        <div className="relative flex items-center justify-between">
+          <span className="text-[13px] font-bold text-white">🌎 MATOKO Automático</span>
+          <button type="button" onClick={onClose} className="text-white/40 hover:text-white/70">✕</button>
+        </div>
+        {!country ? (
+          <>
+            <p className="relative mb-3 mt-1 text-[10px] text-white/40">Elegí un país — armamos una mezcla automática con sus géneros típicos.</p>
+            <div className="relative grid grid-cols-2 gap-2.5">
+              {COUNTRY_GENRES.map((c, i) => (
+                <button
+                  key={c.country}
+                  type="button"
+                  onClick={() => selectCountry(c)}
+                  className="rounded-xl px-3 py-3.5 text-left text-[12px] font-extrabold tracking-[0.02em] transition-transform active:scale-95"
+                  style={raisedActive(GLOW_PALETTE[i % GLOW_PALETTE.length])}
+                >
+                  {c.flag} {c.country}
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="relative mb-3 mt-1 flex items-center gap-2">
+              <button type="button" onClick={() => setCountry(null)} className="text-[10px] text-white/40 hover:text-white/70">← países</button>
+              <span className="text-[11px] font-semibold text-white/70">{country.flag} {country.country}</span>
+            </div>
+            <p className="relative mb-2.5 text-[9.5px] text-white/35">Elegí cuántas canciones de cada género (0-10).</p>
+            <div className="relative flex flex-col gap-3">
+              {country.genres.map((g, gi) => {
+                const color = GLOW_PALETTE[gi % GLOW_PALETTE.length]
+                const current = counts[g] ?? 0
+                return (
+                  <div key={g} className="flex flex-col gap-1.5 rounded-xl p-2.5" style={RAISED_BTN}>
+                    <span className="text-[11px] font-bold capitalize" style={{ color: current > 0 ? color : 'rgba(255,255,255,0.6)' }}>{g}</span>
+                    <div className="flex flex-wrap gap-1">
+                      {Array.from({ length: 11 }, (_, n) => n).map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setCounts((prev) => ({ ...prev, [g]: n }))}
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-[10px] font-extrabold transition-transform active:scale-90"
+                          style={current === n ? raisedActive(color) : { ...RAISED_BTN, color: 'rgba(255,255,255,0.4)' }}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => onConfirm(country.genres.map((g) => ({ genre: g, count: counts[g] ?? 0 })).filter((r) => r.count > 0))}
+              disabled={country.genres.every((g) => (counts[g] ?? 0) <= 0)}
+              className="relative mt-3.5 w-full rounded-lg py-2.5 text-[11px] font-bold text-black disabled:opacity-30"
+              style={{ background: DECK_A }}
+            >
+              🎲 Generar y mezclar
+            </button>
+          </>
+        )}
+      </div>
     </div>
   )
 }
@@ -2216,6 +2331,7 @@ export function DjIaScreen() {
   // --- Asistente DJ IA: activación general + modos reales que ---
   // ajustan parámetros de verdad del motor (no solo una etiqueta).
   const [djiaActive, setDjiaActive] = useState(() => readLS('dj-ia:djiaActive', false))
+  const [showMatokoAutoModal, setShowMatokoAutoModal] = useState(false)
   const [energyMode, setEnergyMode] = useState<EnergyMode>(() => readLS('dj-ia:energyMode', 'normal' as EnergyMode))
   const [cleanMode, setCleanMode] = useState(() => readLS('dj-ia:cleanMode', false))
   const [smartVolume, setSmartVolume] = useState(() => readLS('dj-ia:smartVolume', false))
@@ -2624,11 +2740,19 @@ export function DjIaScreen() {
   const onRemoveGenreRow = useCallback((i: number) => setGenreMix((prev) => prev.filter((_, idx) => idx !== i)), [])
   const onResetGenres = useCallback(() => setGenreMix(DEFAULT_GENRE_MIX), [])
 
-  const onGenerateGenreQueue = useCallback(async () => {
+  // `rowsOverride`: "MATOKO Automático" (selector de país) genera la
+  // cola con los géneros del país recién elegido sin depender de que
+  // `genreMix` (estado de React, asíncrono) ya se haya actualizado —
+  // evita tocar una cola vieja por una condición de carrera de cierre
+  // (closure stale), mismo criterio que otros lados de este motor.
+  // Devuelve la cola armada para que quien llamó pueda arrancarla al
+  // toque, también sin depender del estado ya actualizado.
+  const onGenerateGenreQueue = useCallback(async (rowsOverride?: GenreMixRow[]) => {
+    const rows = rowsOverride ?? genreMix
     setGenreGenerating(true)
     setYtAutoStatus('Generando lista…')
     const collected: (YtQueueTrack & { genre: string })[] = []
-    for (const row of genreMix) {
+    for (const row of rows) {
       if (!row.genre.trim() || row.count <= 0) continue
       const genre = row.genre.trim()
       try {
@@ -2645,12 +2769,13 @@ export function DjIaScreen() {
     // compartido con MUSIC) — sigue siendo aleatoria (nunca queda todo un género pegado ni siempre el mismo
     // orden), pero un género que ya le gusta tiene más chance de salir antes. Sin señal todavía, pesos parejos
     // = mismo shuffle simple de siempre.
-    const weights = getGenreWeights(readProfile(), genreMix.map((r) => r.genre.trim()).filter(Boolean))
+    const weights = getGenreWeights(readProfile(), rows.map((r) => r.genre.trim()).filter(Boolean))
     const ordered = weightedShuffle(collected, (t) => weights[t.genre] ?? 1).map(({ id, title }) => ({ id, title }))
     setYtAutoQueue(ordered)
     setYtAutoIndex(-1)
     setGenreGenerating(false)
     setYtAutoStatus(collected.length > 0 ? `Lista lista: ${collected.length} canciones` : 'No se encontró nada — revisá la conexión con YouTube')
+    return ordered
   }, [genreMix, cleanMode])
 
   // La Lista Automática/Mezcla por género siempre usa el Plato 1 — así
@@ -2685,6 +2810,26 @@ export function DjIaScreen() {
     const next = ytAutoIndex + 1 >= ytAutoQueue.length ? 0 : ytAutoIndex + 1
     playYtAutoIndex(next)
   }, [ytAutoIndex, ytAutoQueue, playYtAutoIndex])
+
+  // "MATOKO Automático" (selector de país) — genera la cola con los
+  // géneros del país recién elegido y arranca directo con el primer
+  // resultado real, usando la cola tal como la devolvió
+  // `onGenerateGenreQueue` (no la del estado `ytAutoQueue`, que
+  // todavía puede no haberse actualizado en este mismo tick).
+  const onMatokoAutoConfirm = useCallback(async (rows: GenreMixRow[]) => {
+    setGenreMix(rows)
+    setShowMatokoAutoModal(false)
+    const ordered = await onGenerateGenreQueue(rows)
+    const first = ordered[0]
+    if (!first) return
+    ytAutoplayNextRef.current = true
+    setYtAutoIndex(0)
+    setYtAutoOn(true)
+    setYtVideoId1(first.id)
+    setYtTitle1(first.title)
+    setYtFocusDeck(1)
+    setVideoTab('SOURCE')
+  }, [onGenerateGenreQueue])
 
   // Armar la lista a mano, una canción a la vez, desde el buscador de
   // arriba ("Agregar → Agregar a la lista") — comparte la cola con la
@@ -3057,6 +3202,15 @@ export function DjIaScreen() {
               >
                 {djiaActive ? '● MATOKO activado' : '○ Activar MATOKO'}
               </button>
+              <button
+                type="button"
+                onClick={() => setShowMatokoAutoModal(true)}
+                className="rounded-full px-3.5 py-2 text-[11px] font-bold"
+                style={RAISED_BTN}
+                title="Elegir país y géneros — arma y pone a sonar sola una mezcla real de YouTube"
+              >
+                🌎 MATOKO Automático
+              </button>
 
               {djiaActive && (
                 <>
@@ -3380,6 +3534,9 @@ export function DjIaScreen() {
           <MiniPlayer deckA={deckAEngine} deckB={deckBEngine} onOpenSource={() => setVideoTab('SOURCE')} />
         </div>
       </div>
+      {showMatokoAutoModal && (
+        <MatokoAutoModal onClose={() => setShowMatokoAutoModal(false)} onConfirm={(rows) => void onMatokoAutoConfirm(rows)} />
+      )}
     </div>
   )
 }
