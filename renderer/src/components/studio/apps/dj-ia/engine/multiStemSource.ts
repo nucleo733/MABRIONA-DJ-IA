@@ -23,7 +23,7 @@ export class MultiStemSource {
   private _loopEnd = 0
   onended: (() => void) | null = null
 
-  constructor(ctx: AudioContext, buffers: StemBuffers, stemGains: Record<StemName, GainNode>) {
+  constructor(ctx: BaseAudioContext, buffers: StemBuffers, stemGains: Record<StemName, GainNode>) {
     this.nodes = STEM_NAMES.reduce((acc, stem) => {
       const node = ctx.createBufferSource()
       node.buffer = buffers[stem]
