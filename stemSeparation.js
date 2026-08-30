@@ -33,9 +33,24 @@ function modelPath(userDataPath) {
   return path.join(userDataPath, 'models', 'htdemucs_fp16weights.onnx')
 }
 
+// Los dos platos comparten el mismo archivo de modelo — si se aprieta
+// "STEMS" en Deck 1 y Deck 2 casi junto, dos descargas escribiendo el
+// mismo `.part` a la vez se pisan entre sí (el tamaño final termina
+// dando bien de casualidad, pero el contenido queda mezclado — eso
+// es lo que generaba el "Protobuf parsing failed" real, dos veces
+// seguidas). Esta promesa compartida hace que la segunda llamada
+// espere a la primera en vez de arrancar otra descarga en paralelo.
+let downloadInFlight = null
+
 async function ensureModelDownloaded(userDataPath, onProgress) {
   const dest = modelPath(userDataPath)
   if (fs.existsSync(dest)) return dest
+  if (downloadInFlight) return downloadInFlight
+  downloadInFlight = downloadModel(userDataPath, dest, onProgress).finally(() => { downloadInFlight = null })
+  return downloadInFlight
+}
+
+async function downloadModel(userDataPath, dest, onProgress) {
   await fsp.mkdir(path.dirname(dest), { recursive: true })
   const tmp = `${dest}.part`
   const res = await fetch(MODEL_URL, { redirect: 'follow' })
