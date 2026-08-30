@@ -1606,15 +1606,25 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
             type="button"
             onClick={handleSeparateStems}
             disabled={engine.isSeparatingStems}
-            className="w-full rounded-md py-1.5 text-[9px] font-bold disabled:opacity-40"
+            className="relative w-full overflow-hidden rounded-md py-1.5 text-[9px] font-bold disabled:opacity-100"
             style={RAISED_BTN}
             title="Separar voz/batería/bajo/resto de esta pista con IA (real, no cancelación de canal — puede tardar unos minutos la primera vez)"
           >
-            {engine.isSeparatingStems
-              ? (engine.stemProgress
-                ? (engine.stemProgress.phase === 'downloading-model' ? `Bajando IA… ${Math.round(engine.stemProgress.ratio * 100)}%` : `${Math.round(engine.stemProgress.ratio * 100)}%`)
-                : 'Preparando…')
-              : 'TOCÁ ACÁ PARA SEPARAR'}
+            {engine.isSeparatingStems && (
+              <span
+                className="pointer-events-none absolute inset-y-0 left-0 transition-[width] duration-300 ease-linear"
+                style={{
+                  width: `${Math.round((engine.stemProgress?.ratio ?? 0) * 100)}%`,
+                  background: 'linear-gradient(90deg, #16a34a, #3ddc6f)',
+                  boxShadow: '0 0 10px rgba(61,220,111,0.6)',
+                }}
+              />
+            )}
+            <span className="relative">
+              {engine.isSeparatingStems
+                ? (engine.stemProgress?.phase === 'downloading-model' ? 'BAJANDO IA…' : 'SEPARANDO…')
+                : 'TOCÁ ACÁ PARA SEPARAR'}
+            </span>
           </button>
         )}
         {engine.stemError && (
