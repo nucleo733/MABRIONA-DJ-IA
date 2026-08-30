@@ -101,6 +101,39 @@ ipcMain.handle('djia:check', async (_evt, { id }) => {
   }
 })
 
+/**
+ * Sin auto-actualización real (Squirrel.Mac exige firma de código, que
+ * esta app todavía no tiene) — esto solo avisa si hay una versión más
+ * nueva publicada en GitHub Releases, para que quien ya la descargó
+ * sepa que existe y vaya a bajarla de nuevo.
+ */
+ipcMain.handle('djia:checkForUpdate', async () => {
+  try {
+    const res = await fetch('https://api.github.com/repos/nucleo733/MATOKO-DJ/releases/latest', {
+      headers: { Accept: 'application/vnd.github+json' },
+    })
+    if (!res.ok) return { updateAvailable: false }
+    const { tag_name } = await res.json()
+    const latest = String(tag_name || '').replace(/^v/, '')
+    const current = app.getVersion()
+    const latestParts = latest.split('.').map(Number)
+    const currentParts = current.split('.').map(Number)
+    let isNewer = false
+    for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
+      const l = latestParts[i] || 0
+      const c = currentParts[i] || 0
+      if (l !== c) {
+        isNewer = l > c
+        break
+      }
+    }
+    return isNewer ? { updateAvailable: true, latestVersion: latest, url: 'https://mabriona.com/dj-ia' } : { updateAvailable: false }
+  } catch (err) {
+    console.error('[MATOKO DJ] no se pudo chequear si hay una versión nueva:', err)
+    return { updateAvailable: false }
+  }
+})
+
 async function createWindow() {
   if (!rendererServer) {
     rendererServer = await startRendererServer()
