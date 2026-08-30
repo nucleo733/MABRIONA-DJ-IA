@@ -115,6 +115,13 @@ async function createWindow() {
     backgroundColor: '#000000',
     title: 'MATOKO DJ',
     icon: path.join(__dirname, 'build', 'icon.icns'),
+    // Barra de título propia (violeta→celeste, con el logo) en vez de la
+    // franja gris nativa — solo macOS, ahí `titleBarStyle: 'hidden'` deja
+    // los botones de semáforo flotando sin más trabajo. La barra en sí
+    // (BrandBar) vive en el renderer, en renderer/src/main.tsx.
+    ...(process.platform === 'darwin'
+      ? { titleBarStyle: 'hidden', trafficLightPosition: { x: 14, y: 14 } }
+      : {}),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
