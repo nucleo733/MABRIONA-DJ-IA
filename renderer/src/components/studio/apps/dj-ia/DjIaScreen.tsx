@@ -892,6 +892,24 @@ const DEFAULT_GENRE_MIX: GenreMixRow[] = [
 ]
 interface YtQueueTrack { id: string; title: string }
 
+// Filtro real por título — no hay forma de "escuchar" un video de
+// YouTube antes de ponerlo en la cola (ni acceso a su audio, ni a
+// vistas/likes desde el buscador de acá), así que esto es lo que sí
+// se puede chequear de verdad: descartar resultados que el propio
+// título deja claro que NO son la canción en sí (tutorial, reacción,
+// entrevista, letra sola sin audio real, etc.) antes de agregarlos.
+const NOT_A_SONG_TITLE_HINTS = [
+  'tutorial', 'cómo tocar', 'como tocar', 'cómo bailar', 'como bailar', 'clase de', 'aprende a',
+  'reaction', 'reacciona', 'reacción a', 'reaccion a',
+  'review', 'reseña', 'análisis', 'analisis',
+  'entrevista', 'interview', 'documental', 'documentary', 'behind the scenes',
+  'how to', 'lesson', 'lección', 'leccion',
+]
+function isLikelyRealSong(title: string): boolean {
+  const t = title.toLowerCase()
+  return !NOT_A_SONG_TITLE_HINTS.some((hint) => t.includes(hint))
+}
+
 /**
  * Lista Automática por Género — a diferencia de la Mezcla Automática
  * (Biblioteca, con BPM/tempo real), esta busca de verdad en YouTube
@@ -2761,7 +2779,8 @@ export function DjIaScreen() {
         if (r.ok) {
           const data = await r.json()
           const items: { id: string; title: string }[] = data.items ?? []
-          collected.push(...items.slice(0, row.count).map((it) => ({ id: it.id, title: it.title, genre })))
+          const realSongs = items.filter((it) => isLikelyRealSong(it.title))
+          collected.push(...realSongs.slice(0, row.count).map((it) => ({ id: it.id, title: it.title, genre })))
         }
       } catch { /* ese género se salta — no se inventa nada en su lugar */ }
     }
