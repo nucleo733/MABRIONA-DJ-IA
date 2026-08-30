@@ -6,6 +6,7 @@ import { DjIaScreen } from './components/studio/apps/dj-ia/DjIaScreen'
 
 const BRAND_BAR_HEIGHT = 40
 const UPDATE_BANNER_HEIGHT = 36
+const TITLE_HEIGHT = 64
 
 /**
  * Sin auto-actualización real (requeriría firmar la app) — este banner
@@ -71,18 +72,27 @@ function BrandBar() {
   )
 }
 
+function TitleHeader() {
+  return (
+    <div className="flex h-16 shrink-0 items-center justify-center bg-black">
+      <h1 className="text-3xl font-extrabold tracking-wide text-white sm:text-4xl">MATOKO</h1>
+    </div>
+  )
+}
+
 const isMac = window.djia.platform === 'darwin'
 
 function App() {
   const [hasUpdateBanner, setHasUpdateBanner] = useState(false)
-  const topBarsHeight = (isMac ? BRAND_BAR_HEIGHT : 0) + (hasUpdateBanner ? UPDATE_BANNER_HEIGHT : 0)
+  const topBarsHeight = (isMac ? BRAND_BAR_HEIGHT : 0) + (hasUpdateBanner ? UPDATE_BANNER_HEIGHT : 0) + TITLE_HEIGHT
 
   return (
     <AuthProvider>
       <div className="flex h-screen w-full flex-col bg-black text-white">
         {isMac && <BrandBar />}
         <UpdateBanner onVisibleChange={setHasUpdateBanner} />
-        <div className="min-h-0 flex-1 overflow-auto" style={topBarsHeight ? { height: `calc(100vh - ${topBarsHeight}px)` } : undefined}>
+        <TitleHeader />
+        <div className="min-h-0 flex-1 overflow-auto" style={{ height: `calc(100vh - ${topBarsHeight}px)` }}>
           <DjIaScreen />
         </div>
       </div>
