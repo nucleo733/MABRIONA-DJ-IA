@@ -1562,6 +1562,17 @@ function DeckUnit({ side, num, active, engine, syncTargetBpm, syncTargetEngine, 
         <span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-white/70">
           {engine.isLoading ? 'Cargando…' : (engine.trackName ? `${engine.isVideoTrack ? '🎥' : '🎵'} ${engine.trackName}` : 'Sin pista')}
         </span>
+        {engine.trackName && !engine.isLoading && (
+          <button
+            type="button"
+            onClick={() => engine.unloadTrack()}
+            className="flex shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white/40 hover:text-white/70"
+            style={{ width: 20, height: 20 }}
+            title="Quitar esta pista del plato"
+          >
+            ✕
+          </button>
+        )}
         <label
           className="flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-2 py-1 text-[9px] font-bold"
           style={RAISED_BTN}
@@ -2074,13 +2085,14 @@ function useYoutubeDeckEngine(title: string, yt: {
 
   const loadFile = useCallback((_file: File, _opts?: { persist?: boolean; onLoaded?: () => void }) => {}, [])
   const loadTrack = useCallback((_track: import('./types').Track) => {}, [])
+  const unloadTrack = useCallback(() => {}, [])
 
   return {
     trackName: title, isVideoTrack: false, thumbnail: null, getLoadedFile: () => null, isLoading: false, isPlaying: yt.isPlaying, duration: yt.duration, currentTime: yt.currentTime,
     peaks: null, bpm, beatGrid: null, level: 0, spectrum: [],
     pitch, tempoRangePct, trim, eq, colorFxType, colorFxAmount, gain, muted, cueOn, fxSendActive,
     loop, hotCues, page, slip, quantize,
-    loadFile, loadTrack, togglePlay, cuePress, seekTo, nudge,
+    loadFile, loadTrack, unloadTrack, togglePlay, cuePress, seekTo, nudge,
     setGain, setTrim, setEq, setColorFxType, setColorFxAmount, toggleMuted, toggleCue, setFxSendActive,
     setPitch, resetTempo, cycleTempoRange, tapTempo, syncTo,
     setLoopIn, setLoopOut, exitReloop, clearLoop, setAutoLoop, loop4Beats, beatJump,

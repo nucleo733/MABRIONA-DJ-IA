@@ -845,6 +845,29 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     applyBuffer(track.buffer, track.name, track.bpm)
   }, [stopSource, applyBuffer])
 
+  // Saca la pista del plato del todo — vuelve a "Sin pista", distinto
+  // de cargar una nueva encima (`loadFile`/`loadTrack`).
+  const unloadTrack = useCallback(() => {
+    stopSource(false)
+    bufferRef.current = null
+    lastFileRef.current = null
+    offsetRef.current = 0
+    setCurrentTime(0)
+    setIsPlaying(false)
+    setTrackName(null)
+    setIsVideoTrack(false)
+    setThumbnail(null)
+    setDuration(0)
+    setPeaks(null)
+    setBpm(null)
+    setBeatGrid(null)
+    setHotCues(Array.from({ length: HOTCUE_SLOTS }, () => ({ time: null })))
+    setLoop({ start: null, end: null, active: false })
+    stemBuffersRef.current = null
+    setStemsReady(false)
+    setStemMuted({ voz: false, bateria: false, bajo: false, resto: false })
+  }, [stopSource])
+
   const seekTo = useCallback((seconds: number) => {
     const buffer = bufferRef.current
     if (!buffer) return
@@ -1337,7 +1360,7 @@ export function useDeckEngine(ctx: AudioContext, output: AudioNode, cueBus: Audi
     getLoadedFile,
     pitch, tempoRangePct, trim, eq, colorFxType, colorFxAmount, gain: gainValue, muted, cueOn, fxSendActive,
     loop, hotCues, page, slip, quantize,
-    loadFile, loadTrack, togglePlay, cuePress, seekTo, nudge,
+    loadFile, loadTrack, unloadTrack, togglePlay, cuePress, seekTo, nudge,
     setGain, setTrim, setEq, setColorFxType, setColorFxAmount, toggleMuted, toggleCue, setFxSendActive,
     setPitch, resetTempo, cycleTempoRange, tapTempo, syncTo,
     setLoopIn, setLoopOut, exitReloop, clearLoop, setAutoLoop, loop4Beats, beatJump,
