@@ -21,6 +21,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm ci --prefix renderer
+
       - name: Compilar el instalador NSIS real (incluye el macro customInstall que instala Brave si falta)
         run: npm run dist:win
 
