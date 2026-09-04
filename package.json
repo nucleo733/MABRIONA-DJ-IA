@@ -68,6 +68,18 @@
       "category": "AudioVideo",
       "target": [
         {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
           "target": "AppImage",
           "arch": [
             "x64"
@@ -77,6 +89,12 @@
     },
     "directories": {
       "output": "dist"
+    },
+    "deb": {
+      "afterInstall": "installer/linuxAfterInstall.sh"
+    },
+    "rpm": {
+      "afterInstall": "installer/linuxAfterInstall.sh"
     }
   },
   "dependencies": {
