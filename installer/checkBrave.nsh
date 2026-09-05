@@ -20,20 +20,32 @@
   IfFileExists "$PROGRAMFILES\BraveSoftware\Brave-Browser\Application\brave.exe" brave_already_installed 0
   IfFileExists "$PROGRAMFILES64\BraveSoftware\Brave-Browser\Application\brave.exe" brave_already_installed 0
 
-  ; 2) No está — descargar el instalador oficial real de Brave (el
-  ;    "Standalone", completo, no el stub online) desde el release más
-  ;    reciente real de GitHub, y correrlo en silencio antes de
-  ;    continuar. `inetc` sigue los redirects reales de GitHub
-  ;    (github.com → CDN de GitHub) — mismo criterio que MABRIONA
-  ;    Browser en su propio customInstall.
-  DetailPrint "Instalando Brave (necesario para buscar música en YouTube desde DJ AI)…"
+  ; 2) No está — instalarlo. El instalador oficial real de Brave (el
+  ;    "Standalone", completo, no el stub online) viene EMBEBIDO dentro
+  ;    de este instalador: lo baja `scripts/fetchBrave.js` al compilar
+  ;    y queda en `vendor/`, así instalar Brave funciona aunque la
+  ;    computadora no tenga internet.
+  DetailPrint "Instalando Brave (necesario para buscar música en YouTube desde MATOKO DJ)…"
+  ;    Ojo: `File` es una instrucción de COMPILACIÓN, no de runtime, así
+  ;    que el chequeo de que el archivo exista tiene que ser también de
+  ;    compilación (`!if /FileExists`) — con un `IfFileExists` normal,
+  ;    un build sin `vendor/` no fallaría en la máquina del usuario:
+  ;    fallaría al compilar el instalador.
+  !if /FileExists "${PROJECT_DIR}\vendor\BraveBrowserStandaloneSetup.exe"
+    File "/oname=$PLUGINSDIR\BraveBrowserStandaloneSetup.exe" "${PROJECT_DIR}\vendor\BraveBrowserStandaloneSetup.exe"
+    ExecWait '"$PLUGINSDIR\BraveBrowserStandaloneSetup.exe" /silent /install' $1
+    Goto brave_step_done
+  !else
+  ; 2-bis) Respaldo real por si el build se hizo sin el archivo embebido:
+  ;    se baja en el momento, que es como funcionaba antes. `inetc`
+  ;    sigue los redirects reales de GitHub (github.com → CDN de GitHub).
   inetc::get /SILENT "https://github.com/brave/brave-browser/releases/latest/download/BraveBrowserStandaloneSetup.exe" "$TEMP\BraveBrowserStandaloneSetup.exe"
   Pop $0
   StrCmp $0 "OK" brave_download_ok brave_download_failed
 
   brave_download_failed:
     IfSilent brave_step_done 0
-    MessageBox MB_OK|MB_ICONEXCLAMATION "No se pudo descargar Brave automáticamente. MABRIONA DJ AI va a quedar instalado, pero necesita Brave para buscar música — instalalo desde brave.com cuando puedas."
+    MessageBox MB_OK|MB_ICONEXCLAMATION "No se pudo instalar Brave automáticamente. MATOKO DJ va a quedar instalado, pero necesita Brave para buscar música — instalalo desde brave.com cuando puedas."
     Goto brave_step_done
 
   brave_download_ok:
@@ -42,6 +54,7 @@
     ExecWait '"$TEMP\BraveBrowserStandaloneSetup.exe" /silent /install' $1
     Delete "$TEMP\BraveBrowserStandaloneSetup.exe"
     Goto brave_step_done
+  !endif
 
   brave_already_installed:
     DetailPrint "Brave ya está instalado — no se reinstala."

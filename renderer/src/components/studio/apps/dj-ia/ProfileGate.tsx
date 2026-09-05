@@ -44,6 +44,13 @@ export function updateProfile(id: string, patch: Partial<DjProfile>): DjProfile[
   return next
 }
 
+/** Borra un perfil local (no toca la cuenta de Supabase, si la tenía conectada) y devuelve la lista nueva. */
+export function deleteProfile(id: string): DjProfile[] {
+  const next = readProfiles().filter((p) => p.id !== id)
+  writeProfiles(next)
+  return next
+}
+
 /**
  * Achica la foto antes de guardarla (JPEG, máx 240x240) — sin esto,
  * una foto de cámara moderna (varios MB) satura `localStorage` rápido
@@ -187,6 +194,10 @@ export function ProfileGate({ onEnter }: { onEnter: (profile: DjProfile) => void
   const [unlocking, setUnlocking] = useState<DjProfile | null>(null)
   const [pin, setPin] = useState('')
   const [error, setError] = useState(false)
+  const [menu, setMenu] = useState<{ profile: DjProfile; x: number; y: number } | null>(null)
+  const [deleting, setDeleting] = useState<DjProfile | null>(null)
+  const [delPin, setDelPin] = useState('')
+  const [delError, setDelError] = useState(false)
 
   const handleCreate = (p: DjProfile) => {
     const next = [...profiles, p]
@@ -207,10 +218,41 @@ export function ProfileGate({ onEnter }: { onEnter: (profile: DjProfile) => void
     }
   }
 
+  const handleDelDigit = (d: string) => {
+    if (!deleting || delPin.length >= 4) return
+    const next = delPin + d
+    setDelPin(next)
+    if (next.length === 4) {
+      if (next === deleting.pin) {
+        const remaining = deleteProfile(deleting.id)
+        setProfiles(remaining)
+        setDeleting(null)
+        setDelPin('')
+        return
+      }
+      setDelError(true)
+      setTimeout(() => { setDelPin(''); setDelError(false) }, 500)
+    }
+  }
+
   if (creating) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-black p-4">
         <NewProfileForm onCreate={handleCreate} onCancel={() => setCreating(false)} />
+      </div>
+    )
+  }
+
+  if (deleting) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-black p-4">
+        <div className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-full" style={raisedActive('#ff3d3d')}>
+          {deleting.photo ? <img src={deleting.photo} alt={deleting.name} className="h-full w-full object-cover" /> : <span className="text-[22px] font-bold text-white">{deleting.name[0]?.toUpperCase()}</span>}
+        </div>
+        <span className="text-[13px] font-bold text-white">Eliminar a {deleting.name}</span>
+        <span className={`text-[9.5px] ${delError ? 'text-red-300' : 'text-white/40'}`}>{delError ? 'PIN incorrecto' : 'Ingresá el PIN para confirmar'}</span>
+        <PinPad value={delPin} onDigit={handleDelDigit} onBackspace={() => setDelPin((p) => p.slice(0, -1))} />
+        <button type="button" onClick={() => { setDeleting(null); setDelPin(''); setDelError(false) }} className="text-[10px] text-white/40 hover:text-white/70">Cancelar</button>
       </div>
     )
   }
@@ -230,7 +272,7 @@ export function ProfileGate({ onEnter }: { onEnter: (profile: DjProfile) => void
   }
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-black p-4">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-black p-4" onClick={() => menu && setMenu(null)}>
       <span className="text-[15px] font-bold text-white">¿Quién sos?</span>
       <div className="grid grid-cols-3 gap-4">
         {profiles.map((p, i) => (
@@ -238,6 +280,10 @@ export function ProfileGate({ onEnter }: { onEnter: (profile: DjProfile) => void
             key={p.id}
             type="button"
             onClick={() => setUnlocking(p)}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              setMenu({ profile: p, x: e.clientX, y: e.clientY })
+            }}
             className="flex flex-col items-center gap-2 transition-transform active:scale-95"
           >
             <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full" style={raisedActive(GLOW[i % GLOW.length])}>
@@ -251,6 +297,23 @@ export function ProfileGate({ onEnter }: { onEnter: (profile: DjProfile) => void
           <span className="text-[11px] font-semibold text-white/50">Nuevo DJ</span>
         </button>
       </div>
+      {menu && (
+        <div
+          className="fixed z-50 w-44 overflow-hidden rounded-xl p-2.5 text-left"
+          style={{ left: menu.x, top: menu.y, ...METAL_PANEL }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MetalGrain />
+          <button
+            type="button"
+            onClick={() => { setDeleting(menu.profile); setMenu(null) }}
+            className="relative w-full rounded-lg px-2.5 py-2 text-left text-[11px] font-semibold text-red-300 hover:text-red-200"
+            style={RAISED_BTN}
+          >
+            Eliminar perfil
+          </button>
+        </div>
+      )}
     </div>
   )
 }

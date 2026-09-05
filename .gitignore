@@ -2,3 +2,6 @@ node_modules/
 dist/
 *.log
 .DS_Store
+
+# Instaladores de Brave que se embeben en el build (150-250 MB, se bajan con scripts/fetchBrave.js)
+vendor/

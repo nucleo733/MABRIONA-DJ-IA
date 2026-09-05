@@ -4,7 +4,12 @@ const { app, BrowserWindow, shell, Menu, dialog, ipcMain } = require('electron')
 const path = require('node:path')
 const http = require('node:http')
 const fs = require('node:fs')
-const { isBraveInstalledMac, installBraveMac } = require('./braveInstaller')
+const {
+  isBraveInstalledMac,
+  installBraveMac,
+  isBraveInstalledLinux,
+  installBraveLinux,
+} = require('./braveInstaller')
 const { separateStems } = require('./stemSeparation')
 
 // MATOKO DJ tiene su propio código del mezclador (renderer/, copia
@@ -235,26 +240,40 @@ function buildMenu() {
 }
 
 /**
- * En Windows, Brave se instala solo durante la instalación de MATOKO DJ
- * (ver `installer/checkBrave.nsh`), sin preguntar. En Mac, el build es
- * una `.app` suelta sin instalador con permisos elevados, así que ese
- * mismo chequeo se hace acá, al arrancar la app — si falta Brave, se
- * instala directo (macOS va a pedir la contraseña de administrador
- * para poder instalar, eso no se puede saltear), sin ofrecer la
- * opción de continuar sin Brave.
+ * Brave siempre antes que MATOKO DJ — Brave es lo que MATOKO DJ usa
+ * para buscar música en YouTube, así que la app no debería llegar a
+ * abrirse sin él.
+ *
+ * En Windows eso ya lo resuelve el propio instalador
+ * (`installer/checkBrave.nsh`) y en Linux el `.deb`/`.rpm`
+ * (`installer/linuxAfterInstall.sh`), los dos como root y sin
+ * preguntar. Lo que queda sin cubrir por un instalador es el build de
+ * Mac (una `.app` suelta) y la AppImage de Linux (que tampoco se
+ * instala) — y el caso, en cualquier sistema, de que el usuario
+ * desinstale Brave más tarde. Por eso el mismo chequeo se repite acá,
+ * al arrancar: si falta Brave, se instala primero y recién después se
+ * abre la ventana de MATOKO DJ.
  */
-async function ensureBraveInstalledMac() {
-  if (process.platform !== 'darwin') return
-  if (isBraveInstalledMac()) return
+async function ensureBraveInstalled() {
+  const platform = process.platform
+  if (platform === 'darwin') {
+    if (isBraveInstalledMac()) return
+  } else if (platform === 'linux') {
+    if (isBraveInstalledLinux()) return
+  } else {
+    return
+  }
+
   await dialog.showMessageBox({
     type: 'info',
     title: 'Instalando Brave',
     message: 'MATOKO DJ necesita el navegador Brave.',
-    detail: 'Se va a instalar ahora — macOS va a pedir tu contraseña de administrador.',
+    detail: 'Se va a instalar ahora — te va a pedir tu contraseña de administrador.',
     buttons: ['Continuar'],
   })
   try {
-    await installBraveMac()
+    if (platform === 'darwin') await installBraveMac()
+    else await installBraveLinux()
   } catch (err) {
     console.error('[MATOKO DJ] no se pudo instalar Brave automáticamente:', err)
     await dialog.showMessageBox({
@@ -268,7 +287,7 @@ async function ensureBraveInstalledMac() {
 
 app.whenReady().then(async () => {
   buildMenu()
-  await ensureBraveInstalledMac()
+  await ensureBraveInstalled()
   createWindow()
 })
 

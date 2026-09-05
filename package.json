@@ -47,6 +47,12 @@
             "arm64"
           ]
         }
+      ],
+      "extraResources": [
+        {
+          "from": "vendor/Brave-Browser-universal.pkg",
+          "to": "brave/Brave-Browser-universal.pkg"
+        }
       ]
     },
     "win": {
@@ -85,6 +91,16 @@
             "x64"
           ]
         }
+      ],
+      "extraResources": [
+        {
+          "from": "vendor/brave-browser.deb",
+          "to": "brave/brave-browser.deb"
+        },
+        {
+          "from": "vendor/brave-browser.rpm",
+          "to": "brave/brave-browser.rpm"
+        }
       ]
     },
     "directories": {
@@ -95,7 +111,8 @@
     },
     "rpm": {
       "afterInstall": "installer/linuxAfterInstall.sh"
-    }
+    },
+    "beforePack": "scripts/fetchBrave.js"
   },
   "dependencies": {
     "onnxruntime-node": "1.23.0"
