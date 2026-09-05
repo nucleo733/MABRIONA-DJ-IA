@@ -10,9 +10,10 @@
   "scripts": {
     "build:renderer": "npm --prefix renderer run build",
     "start": "npm run build:renderer && electron .",
-    "dist:mac": "npm run build:renderer && electron-builder --mac dir",
+    "dist:mac": "npm run build:renderer && electron-builder --mac && bash scripts/makeDmg.sh",
     "dist:win": "npm run build:renderer && electron-builder --win nsis --publish=never",
-    "dist:linux": "npm run build:renderer && electron-builder --linux AppImage"
+    "dist:linux": "npm run build:renderer && electron-builder --linux AppImage",
+    "assets:mac": "/usr/bin/python3 scripts/makeMacAssets.py"
   },
   "devDependencies": {
     "electron": "^31.0.0",
@@ -43,8 +44,7 @@
         {
           "target": "dir",
           "arch": [
-            "x64",
-            "arm64"
+            "universal"
           ]
         }
       ],
@@ -53,7 +53,9 @@
           "from": "vendor/Brave-Browser-universal.pkg",
           "to": "brave/Brave-Browser-universal.pkg"
         }
-      ]
+      ],
+      "minimumSystemVersion": "11.0",
+      "artifactName": "${productName}.${ext}"
     },
     "win": {
       "icon": "build/icon.ico",
@@ -112,7 +114,8 @@
     "rpm": {
       "afterInstall": "installer/linuxAfterInstall.sh"
     },
-    "beforePack": "scripts/fetchBrave.js"
+    "beforePack": "scripts/fetchBrave.js",
+    "afterPack": "scripts/afterPackMac.js"
   },
   "dependencies": {
     "onnxruntime-node": "1.23.0"

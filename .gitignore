@@ -5,3 +5,10 @@ dist/
 
 # Instaladores de Brave que se embeben en el build (150-250 MB, se bajan con scripts/fetchBrave.js)
 vendor/
+
+# Artefactos finales de distribución (release/): son los archivos oficiales
+# que se publican, pero no caben en el repo — el DMG solo pesa 450 MB y
+# GitHub no acepta archivos de más de 100 MB. Se regeneran enteros con
+# `npm run dist:mac`. Lo que sí está versionado es todo lo que hace falta
+# para generarlos: scripts/, installer/, build/ y la configuración.
+release/
