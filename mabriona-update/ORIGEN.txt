@@ -1,0 +1,10 @@
+NO EDITAR NADA DE ESTA CARPETA.
+
+Es una copia del cliente central del MABRIONA UPDATE SYSTEM.
+Cualquier cambio se hace en ese repositorio y se vuelve a copiar con:
+  node tools/sincronizar.js
+
+producto: matoko-dj
+origen:   MABRIONA-UPDATE-SYSTEM @ sin-commit
+huella:   e5ad1cc02014f68a
+fecha:    2026-09-05T00:52:53.432Z

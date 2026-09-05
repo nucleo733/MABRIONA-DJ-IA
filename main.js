@@ -12,6 +12,12 @@ const {
 } = require('./braveInstaller')
 const { separateStems } = require('./stemSeparation')
 
+// MABRIONA UPDATE SYSTEM — cliente central de actualizaciones.
+// La lógica vive en `mabriona-update/`, que es una copia del repositorio
+// MABRIONA-UPDATE-SYSTEM y NO se edita acá (ver mabriona-update/ORIGEN.txt).
+// Esta app solo aporta su identidad: producto, versión y canal.
+const { integrarActualizaciones } = require('./mabriona-update/electron')
+
 // MATOKO DJ tiene su propio código del mezclador (renderer/, copia
 // standalone del componente que también vive en mabriona.com) — no
 // carga la web de MABRIONA Studio. Solo dos
@@ -289,6 +295,15 @@ app.whenReady().then(async () => {
   buildMenu()
   await ensureBraveInstalled()
   createWindow()
+  // Se revisa DESPUÉS de abrir la ventana: nadie tiene que esperar a que
+  // termine una consulta de red para empezar a usar la aplicación. Si no hay
+  // internet, la consulta falla en silencio y se reintenta en el próximo inicio.
+  integrarActualizaciones({
+    producto: 'matoko-dj',
+    nombreProducto: 'MATOKO DJ',
+    version: app.getVersion(),
+    canal: 'stable',
+  }).revisar()
 })
 
 app.on('window-all-closed', () => {

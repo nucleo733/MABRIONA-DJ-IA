@@ -26,6 +26,7 @@
     "icon": "build/icon.icns",
     "files": [
       "main.js",
+      "mabriona-update/**/*",
       "preload.js",
       "braveInstaller.js",
       "stemSeparation.js",
